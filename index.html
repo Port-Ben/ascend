@@ -133,7 +133,66 @@
   .empty{background:var(--panel);border:1px dashed var(--line);border-radius:13px;
     padding:26px 16px;text-align:center;color:var(--ink-dim);font-size:13px;}
 
+  /* ===== tabs ===== */
+  .tabs{display:flex;gap:6px;margin:20px 0 4px;padding:4px;
+    background:var(--panel);border:1px solid var(--line);border-radius:12px;}
+  .tab{flex:1;background:none;border:none;color:var(--ink-faint);font:inherit;
+    font-size:13px;padding:10px;border-radius:9px;cursor:pointer;transition:.16s;}
+  .tab.on{background:var(--panel-2);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line);}
+  .tab:active{opacity:.75;}
+
+  /* ===== scale selector ===== */
+  .scale{display:flex;gap:5px;margin:18px 0 4px;}
+  .sc{flex:1;background:var(--panel);border:1px solid var(--line);color:var(--ink-faint);
+    font:inherit;font-size:12px;padding:8px 0;border-radius:8px;cursor:pointer;
+    font-family:ui-monospace,"SF Mono",Menlo,monospace;transition:.16s;}
+  .sc.on{background:var(--panel-2);color:var(--cy);border-color:var(--cy);}
+  .sc:active{opacity:.75;}
+
+  /* ===== KPI cards ===== */
+  .kpis{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:14px;}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:13px;}
+  .kpi-l{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-faint);}
+  .kpi-v{font-size:24px;font-weight:600;margin-top:5px;letter-spacing:-.02em;}
+  .kpi-s{font-size:11px;color:var(--ink-faint);margin-top:2px;}
+
+  /* ===== heatmap ===== */
+  .heatwrap{overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px;}
+  .heat{display:grid;grid-auto-flow:column;grid-template-rows:repeat(7,1fr);
+    gap:3px;min-width:min-content;}
+  .heat i{width:12px;height:12px;border-radius:2px;background:#0e1725;display:block;}
+  .heat i.h1{background:#1d4d3a;}
+  .heat i.h2{background:#2a7a56;}
+  .heat i.h3{background:#34a870;}
+  .heat i.h4{background:#3ddc97;box-shadow:0 0 6px rgba(61,220,151,.5);}
+  .heat i.future{background:transparent;}
+  .heatlegend{display:flex;align-items:center;gap:4px;margin-top:9px;
+    font-size:10px;color:var(--ink-faint);}
+  .heatlegend i{width:11px;height:11px;border-radius:2px;background:#0e1725;display:block;}
+  .heatlegend i.h1{background:#1d4d3a;}
+  .heatlegend i.h2{background:#2a7a56;}
+  .heatlegend i.h3{background:#34a870;}
+  .heatlegend i.h4{background:#3ddc97;}
+
+  /* ===== trend chart ===== */
+  .chartbox{background:var(--panel);border:1px solid var(--line);
+    border-radius:13px;padding:12px;}
+  .chartbox svg{width:100%;height:120px;display:block;}
+
+  /* ===== stat rows ===== */
+  .srow{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    padding:11px 13px;margin-bottom:8px;}
+  .srow-t{display:flex;justify-content:space-between;align-items:baseline;gap:10px;}
+  .srow-n{font-size:13.5px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .srow-v{font-size:14px;font-weight:600;flex:none;}
+  .srow-b{height:4px;border-radius:2px;background:#0e1725;margin-top:8px;overflow:hidden;}
+  .srow-b span{display:block;height:100%;transition:width .4s ease;}
+  .srow-s{font-size:10px;color:var(--ink-faint);margin-top:5px;letter-spacing:.06em;}
+  .noData{background:var(--panel);border:1px dashed var(--line);border-radius:12px;
+    padding:24px 16px;text-align:center;color:var(--ink-faint);font-size:12.5px;line-height:1.7;}
+
   /* ============ FOCUS OVERLAY ============ */
+
   .ov{position:fixed;inset:0;z-index:50;background:#05070c;
     display:none;flex-direction:column;align-items:center;justify-content:center;
     padding:24px calc(24px + env(safe-area-inset-left)) calc(24px + env(safe-area-inset-bottom));}
@@ -172,7 +231,7 @@
 <div class="wrap">
 
   <section class="hero">
-    <div class="hero-title">Home.</div>
+    <div class="hero-title">BEN</div>
     <div class="hero-art" id="art">
       <img id="heroimg" alt="">
       <svg class="fallback" viewBox="0 0 200 240" fill="none" aria-hidden="true">
@@ -202,6 +261,12 @@
     <div class="week" id="week"></div>
   </section>
 
+  <div class="tabs">
+    <button class="tab on" id="tabHome">Today</button>
+    <button class="tab" id="tabStats">Stats</button>
+  </div>
+
+  <div id="paneHome">
   <div class="sect"><h2 id="datestr">Today</h2>
     <button id="editbtn">Edit</button></div>
   <div class="habits" id="habits"></div>
@@ -222,10 +287,53 @@
 
   <div class="sect"><h2>Progress.</h2><span class="meta num" id="totalpts">0 pts</span></div>
   <div class="doms" id="domains"></div>
+  </div>
+
+  <div id="paneStats" style="display:none">
+    <div class="scale" id="scaleBar">
+      <button class="sc on" data-d="7">7d</button>
+      <button class="sc" data-d="30">30d</button>
+      <button class="sc" data-d="90">90d</button>
+      <button class="sc" data-d="365">1y</button>
+      <button class="sc" data-d="0">All</button>
+    </div>
+
+    <div class="kpis" id="kpis"></div>
+
+    <div class="sect"><h2>Consistency.</h2><span class="meta num" id="heatMeta"></span></div>
+    <div class="heatwrap"><div class="heat" id="heat"></div></div>
+    <div class="heatlegend">
+      <span>Less</span>
+      <i class="h0"></i><i class="h1"></i><i class="h2"></i><i class="h3"></i><i class="h4"></i>
+      <span>More</span>
+    </div>
+
+    <div class="sect"><h2>Trend.</h2><span class="meta num" id="trendMeta"></span></div>
+    <div class="chartbox"><svg id="trend" viewBox="0 0 320 120" preserveAspectRatio="none"></svg></div>
+
+    <div class="sect"><h2>Habits.</h2><span class="meta num" id="rateMeta"></span></div>
+    <div id="rates"></div>
+
+    <div class="sect"><h2>Time logged.</h2><span class="meta num" id="timeMeta"></span></div>
+    <div id="times"></div>
+  </div>
+
+  <div id="backupBar" style="display:none;margin-top:14px;background:#141b12;
+    border:1px solid #2c3d22;border-radius:12px;padding:12px 14px;
+    align-items:center;gap:12px">
+    <div style="flex:1;min-width:0">
+      <div style="font-size:13px;color:#a8d67a">Back up your data</div>
+      <div id="backupMsg" style="font-size:11px;color:var(--ink-faint);margin-top:2px"></div>
+    </div>
+    <button id="backupNow" style="flex:none;background:#a8d67a;color:#0d1408;border:none;
+      font:inherit;font-size:13px;font-weight:600;padding:9px 14px;border-radius:8px;cursor:pointer">Export</button>
+    <button id="backupHide" aria-label="Dismiss" style="flex:none;background:none;border:none;
+      color:var(--ink-faint);font-size:20px;line-height:1;padding:0 2px;cursor:pointer">&times;</button>
+  </div>
 
   <div class="foot">
     <span class="num" id="streak">0 day streak</span>
-    <span><button id="artbtn">Image</button> · <button id="exportbtn">Export</button> · <button id="importbtn">Import</button></span>
+    <span><button id="artbtn">Image</button> · <button id="exportbtn">Export</button> · <button id="importbtn">Import</button> · <button id="restorebtn">Restore</button></span>
   </div>
   <input type="file" id="fileinput" accept=".json" style="display:none">
   <input type="file" id="imginput" accept="image/*" style="display:none">
@@ -282,6 +390,18 @@
       <button class="primary" id="edSave">Save</button>
     </div>
     <div class="ov-note">Enter 0 for a checkbox, or 1–540 minutes for a timer.</div>
+  </div>
+</div>
+
+<div class="ov" id="rsov">
+  <div class="ov-in">
+    <div class="ov-eye">Restore</div>
+    <div class="ov-name">Daily snapshots</div>
+    <div id="rsList" style="max-height:46vh;overflow-y:auto;text-align:left"></div>
+    <div class="ov-acts" style="margin-top:20px">
+      <button id="rsClose">Close</button>
+    </div>
+    <div class="ov-note">Snapshots are saved inside this app. They recover mistakes, but not a cleared browser — use Export for that.</div>
   </div>
 </div>
 
@@ -380,6 +500,118 @@
   }
   function save(){try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){}}
 
+  /* ---- daily snapshots + export reminder ---- */
+  var SNAPKEY="ascend.snaps", METAKEY="ascend.meta", MAXSNAPS=14;
+
+  function getMeta(){
+    try{var m=JSON.parse(localStorage.getItem(METAKEY));if(m)return m;}catch(e){}
+    return {lastExport:null,lastSnap:null,hideUntil:null};
+  }
+  function setMeta(m){try{localStorage.setItem(METAKEY,JSON.stringify(m));}catch(e){}}
+
+  function getSnaps(){
+    try{var a=JSON.parse(localStorage.getItem(SNAPKEY));if(a&&a.length)return a;}catch(e){}
+    return [];
+  }
+  function putSnaps(a){
+    try{localStorage.setItem(SNAPKEY,JSON.stringify(a));}
+    catch(e){
+      // storage full: drop oldest half and retry once
+      try{localStorage.setItem(SNAPKEY,JSON.stringify(a.slice(-Math.ceil(a.length/2))));}catch(e2){}
+    }
+  }
+
+  function snapshotIfNeeded(){
+    var m=getMeta(), dk=today();
+    if(m.lastSnap===dk) return;
+    var snaps=getSnaps();
+    snaps.push({date:dk,at:Date.now(),data:JSON.stringify(state)});
+    while(snaps.length>MAXSNAPS) snaps.shift();
+    putSnaps(snaps);
+    m.lastSnap=dk; setMeta(m);
+  }
+
+  function daysAgo(dateStr){
+    if(!dateStr) return 999;
+    return daysSince(dateStr);
+  }
+
+  function refreshBackupBar(){
+    var m=getMeta(), bar=$("backupBar");
+    if(m.hideUntil && daysAgo(m.hideUntil)<3){ bar.style.display="none"; return; }
+    var n=daysAgo(m.lastExport);
+    if(n>=7){
+      bar.style.display="flex";
+      $("backupMsg").textContent = m.lastExport
+        ? "Last export was "+n+" days ago. Snapshots live in this browser only."
+        : "You haven't exported yet. Snapshots live in this browser only.";
+    }else{
+      bar.style.display="none";
+    }
+  }
+
+  function markExported(){
+    var m=getMeta(); m.lastExport=today(); m.hideUntil=null; setMeta(m);
+    refreshBackupBar();
+  }
+
+  function doExport(){
+    var payload={version:5,exportedAt:new Date().toISOString(),state:state};
+    var b=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
+    var a=document.createElement("a");
+    a.href=URL.createObjectURL(b);
+    a.download="ascend-"+today()+".json";
+    a.click();
+    markExported();
+  }
+
+  function openRestore(){
+    var snaps=getSnaps().slice().reverse();
+    var list=$("rsList");
+    list.innerHTML="";
+    if(!snaps.length){
+      list.innerHTML='<div style="color:var(--ink-faint);font-size:13px;text-align:center;padding:18px 0">'+
+        'No snapshots yet. One is taken automatically each day you open the app.</div>';
+    }
+    snaps.forEach(function(s){
+      var d;
+      try{d=JSON.parse(s.data);}catch(e){return;}
+      var hcount=(d.habits||[]).length;
+      var lcount=Object.keys(d.log||{}).length;
+      var n=daysAgo(s.date);
+      var row=document.createElement("div");
+      row.style.cssText="display:flex;align-items:center;gap:10px;padding:11px 2px;"+
+        "border-bottom:1px solid var(--line)";
+      row.innerHTML='<div style="flex:1;min-width:0">'+
+        '<div style="font-size:13px" class="num">'+s.date+
+        '<span style="color:var(--ink-faint);font-size:11px"> · '+
+        (n===0?"today":n===1?"yesterday":n+" days ago")+'</span></div>'+
+        '<div style="font-size:11px;color:var(--ink-faint);margin-top:2px">'+
+        hcount+' habits · '+lcount+' days logged</div></div>'+
+        '<button style="flex:none;background:none;border:1px solid var(--line);'+
+        'color:var(--ink-dim);font:inherit;font-size:12px;padding:7px 12px;'+
+        'border-radius:8px;cursor:pointer">Restore</button>';
+      row.querySelector("button").addEventListener("click",function(){
+        if(!confirm("Replace current data with the snapshot from "+s.date+"?")) return;
+        try{
+          var restored=JSON.parse(s.data);
+          if(restored&&restored.habits){
+            // snapshot current state first, so restore is undoable
+            var snaps2=getSnaps();
+            snaps2.push({date:today(),at:Date.now(),data:JSON.stringify(state)});
+            while(snaps2.length>MAXSNAPS) snaps2.shift();
+            putSnaps(snaps2);
+            state=migrate(restored);
+            save(); render();
+            $("rsov").classList.remove("open");
+          }
+        }catch(e){}
+      });
+      list.appendChild(row);
+    });
+    $("rsov").classList.add("open");
+  }
+
   function pad(n){return n<10?"0"+n:""+n;}
   function today(){var d=new Date();return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());}
   function dayKey(o){var d=new Date();d.setDate(d.getDate()-o);
@@ -401,9 +633,6 @@
     var dk=today();
     if(!state.time[dk])state.time[dk]={};
     state.time[dk][id]=(state.time[dk][id]||0)+sec;
-    // prune old day buckets (keep 7)
-    var ks=Object.keys(state.time).sort();
-    while(ks.length>7){delete state.time[ks.shift()];}
   }
 
   /* ---- timer session ---- */
@@ -671,6 +900,222 @@
     var p=pending();
     var stk=streak();
     $("streak").textContent=stk+" day streak"+(p>0?"   today −"+(Math.round(p*10)/10):"");
+    if(activeTab==="stats") renderStats();
+  }
+
+  /* ================= STATS ================= */
+  var scaleDays=7, activeTab="home";
+
+  function firstDay(){
+    var keys=Object.keys(state.log).concat(Object.keys(state.time));
+    keys.push(state.created);
+    keys=keys.filter(Boolean).sort();
+    return keys.length?keys[0]:today();
+  }
+  function spanDays(){
+    var have=daysSince(firstDay())+1;
+    if(scaleDays>0) return Math.min(scaleDays,have);
+    return have;
+  }
+  function fmtHM(sec){
+    var m=Math.round(sec/60);
+    if(m<60) return m+"m";
+    var h=Math.floor(m/60), r=m%60;
+    return h+"h"+(r?" "+r+"m":"");
+  }
+
+  function statsData(){
+    var n=spanDays(), hs=state.habits, out={
+      days:n, dayList:[], totalDone:0, totalPossible:0,
+      perHabit:{}, perDomain:{}, timePerHabit:{}, timeTotal:0,
+      activeDays:0, bestStreak:0, ptsSeries:[]
+    };
+    hs.forEach(function(h){
+      out.perHabit[h.id]={done:0,name:h.name,dom:h.dom,pts:h.pts,min:h.min};
+      out.timePerHabit[h.id]=0;
+    });
+    DOMAINS.forEach(function(d){out.perDomain[d.id]={done:0,possible:0};});
+
+    var streak=0;
+    for(var i=n-1;i>=0;i--){
+      var dk=dayKey(i), done=doneSet(dk), pts=0;
+      out.dayList.push({key:dk,count:done.length,offset:i});
+      if(done.length>0){ out.activeDays++; streak++; if(streak>out.bestStreak)out.bestStreak=streak; }
+      else if(i>0){ streak=0; }
+      hs.forEach(function(h){
+        out.totalPossible++;
+        out.perDomain[h.dom].possible++;
+        if(done.indexOf(h.id)>-1){
+          out.totalDone++;
+          out.perHabit[h.id].done++;
+          out.perDomain[h.dom].done++;
+          pts+=h.pts;
+        }
+      });
+      out.ptsSeries.push(pts);
+      var tb=state.time[dk];
+      if(tb) Object.keys(tb).forEach(function(id){
+        if(out.timePerHabit[id]!==undefined){
+          out.timePerHabit[id]+=tb[id];
+          out.timeTotal+=tb[id];
+        }
+      });
+    }
+    return out;
+  }
+
+  function renderStats(){
+    var s=statsData();
+    var label=(scaleDays>0 && s.days>=scaleDays)
+      ? ("Last "+scaleDays+" days")
+      : ("All data · "+s.days+" day"+(s.days===1?"":"s"));
+
+    /* KPIs */
+    var rate=s.totalPossible?Math.round(s.totalDone/s.totalPossible*100):0;
+    var avgPts=s.days?(s.ptsSeries.reduce(function(a,b){return a+b;},0)/s.days):0;
+    var k=$("kpis");
+    k.innerHTML=
+      kpi("Completion",rate+"%",s.totalDone+" of "+s.totalPossible+" checks")+
+      kpi("Active days",s.activeDays+"/"+s.days,
+        (s.days?Math.round(s.activeDays/s.days*100):0)+"% of the period")+
+      kpi("Best streak",s.bestStreak+"d","within this period")+
+      kpi("Time logged",fmtHM(s.timeTotal),
+        s.days?("~"+fmtHM(s.timeTotal/s.days)+" per day"):"");
+
+    /* heatmap */
+    $("heatMeta").textContent=label;
+    var heat=$("heat");
+    heat.innerHTML="";
+    var hd=Math.min(s.days,371);
+    // pad so the grid starts on a Monday column
+    var oldest=new Date(); oldest.setDate(oldest.getDate()-(hd-1));
+    var padStart=(oldest.getDay()+6)%7;
+    for(var p=0;p<padStart;p++){
+      var pad_=document.createElement("i"); pad_.className="future"; heat.appendChild(pad_);
+    }
+    for(var i=hd-1;i>=0;i--){
+      var dk=dayKey(i), c=doneSet(dk).length, tot=state.habits.length||1;
+      var r=c/tot, cls="";
+      if(c===0) cls="";
+      else if(r<=.25) cls="h1";
+      else if(r<=.5) cls="h2";
+      else if(r<1) cls="h3";
+      else cls="h4";
+      var cell=document.createElement("i");
+      cell.className=cls;
+      cell.title=dk+" — "+c+"/"+tot;
+      heat.appendChild(cell);
+    }
+
+    /* trend */
+    $("trendMeta").textContent="avg "+avgPts.toFixed(1)+" pts/day";
+    drawTrend(s.ptsSeries);
+
+    /* habit completion rates */
+    $("rateMeta").textContent=label;
+    var rc=$("rates");
+    rc.innerHTML="";
+    var arr=state.habits.map(function(h){
+      var ph=s.perHabit[h.id];
+      return {h:h,done:ph.done,rate:s.days?ph.done/s.days:0};
+    }).sort(function(a,b){return b.rate-a.rate;});
+    if(!arr.length){
+      rc.innerHTML='<div class="noData">No habits yet.</div>';
+    }else{
+      arr.forEach(function(x){
+        var dm=DOMAINS.filter(function(d){return d.id===x.h.dom;})[0]||DOMAINS[0];
+        var pct=Math.round(x.rate*100);
+        var el=document.createElement("div");
+        el.className="srow";
+        el.innerHTML='<div class="srow-t"><span class="srow-n"></span>'+
+          '<span class="srow-v num">'+pct+'%</span></div>'+
+          '<div class="srow-b"><span style="width:'+pct+'%;background:'+dm.color+
+          ';box-shadow:0 0 6px '+dm.color+'"></span></div>'+
+          '<div class="srow-s">'+dm.name+' · '+x.done+' of '+s.days+' days</div>';
+        el.querySelector(".srow-n").textContent=x.h.name;
+        rc.appendChild(el);
+      });
+    }
+
+    /* time logged */
+    $("timeMeta").textContent=s.timeTotal?fmtHM(s.timeTotal)+" total":"no timed habits";
+    var tc=$("times");
+    tc.innerHTML="";
+    var timed=state.habits.filter(function(h){return h.min>0;});
+    if(!timed.length){
+      tc.innerHTML='<div class="noData">No timed habits yet.<br>Set a habit\u2019s minutes above zero to track time.</div>';
+    }else{
+      var maxT=Math.max(1,Math.max.apply(null,timed.map(function(h){return s.timePerHabit[h.id]||0;})));
+      timed.map(function(h){return {h:h,t:s.timePerHabit[h.id]||0};})
+        .sort(function(a,b){return b.t-a.t;})
+        .forEach(function(x){
+          var dm=DOMAINS.filter(function(d){return d.id===x.h.dom;})[0]||DOMAINS[0];
+          var el=document.createElement("div");
+          el.className="srow";
+          el.innerHTML='<div class="srow-t"><span class="srow-n"></span>'+
+            '<span class="srow-v num">'+fmtHM(x.t)+'</span></div>'+
+            '<div class="srow-b"><span style="width:'+(x.t/maxT*100)+'%;background:'+dm.color+
+            ';box-shadow:0 0 6px '+dm.color+'"></span></div>'+
+            '<div class="srow-s">'+dm.name+' · target '+shortMin(x.h.min)+'/day</div>';
+          el.querySelector(".srow-n").textContent=x.h.name;
+          tc.appendChild(el);
+        });
+    }
+  }
+
+  function kpi(label,val,sub){
+    return '<div class="kpi"><div class="kpi-l">'+label+'</div>'+
+      '<div class="kpi-v num">'+val+'</div>'+
+      '<div class="kpi-s">'+(sub||"")+'</div></div>';
+  }
+
+  function drawTrend(series){
+    var svg=$("trend"), W=320, H=120, pad=6;
+    svg.innerHTML="";
+    if(!series.length){return;}
+    var max=Math.max.apply(null,series);
+    var totalPossible=state.habits.reduce(function(a,h){return a+h.pts;},0)||1;
+    max=Math.max(max,totalPossible);
+    var n=series.length;
+    var xs=function(i){return n<2?W/2:pad+i*(W-pad*2)/(n-1);};
+    var ys=function(v){return H-pad-(v/max)*(H-pad*2);};
+
+    // baseline grid
+    var g='';
+    [0,.5,1].forEach(function(f){
+      var y=ys(max*f);
+      g+='<line x1="0" y1="'+y.toFixed(1)+'" x2="'+W+'" y2="'+y.toFixed(1)+
+        '" stroke="#1c2739" stroke-width="1"/>';
+    });
+
+    var dPath='',aPath='';
+    series.forEach(function(v,i){
+      var x=xs(i).toFixed(1),y=ys(v).toFixed(1);
+      dPath+=(i?" L":"M")+x+" "+y;
+    });
+    aPath=dPath+" L"+xs(n-1).toFixed(1)+" "+(H-pad)+" L"+xs(0).toFixed(1)+" "+(H-pad)+" Z";
+
+    var pts='';
+    if(n<=31){
+      series.forEach(function(v,i){
+        pts+='<circle cx="'+xs(i).toFixed(1)+'" cy="'+ys(v).toFixed(1)+
+          '" r="2" fill="#4da3ff"/>';
+      });
+    }
+    svg.innerHTML=g+
+      '<path d="'+aPath+'" fill="rgba(77,163,255,.13)"/>'+
+      '<path d="'+dPath+'" fill="none" stroke="#4da3ff" stroke-width="2" '+
+      'stroke-linejoin="round" stroke-linecap="round"/>'+pts;
+  }
+
+  function switchTab(which){
+    activeTab=which;
+    var home=which==="home";
+    $("paneHome").style.display=home?"":"none";
+    $("paneStats").style.display=home?"none":"";
+    $("tabHome").className="tab"+(home?" on":"");
+    $("tabStats").className="tab"+(home?"":" on");
+    if(!home) renderStats();
   }
 
   function removeHabit(id){
@@ -775,26 +1220,60 @@
       pts:parseInt($("newpts").value,10),min:cleanMin($("newmin").value)});
     $("newname").value="";$("newmin").value="0";save();render();
   });
-  $("exportbtn").addEventListener("click",function(){
-    var b=new Blob([JSON.stringify(state,null,2)],{type:"application/json"});
-    var a=document.createElement("a");
-    a.href=URL.createObjectURL(b);a.download="ascend-"+today()+".json";a.click();
+  $("tabHome").addEventListener("click",function(){switchTab("home");});
+  $("tabStats").addEventListener("click",function(){switchTab("stats");});
+  Array.prototype.forEach.call($("scaleBar").children,function(b){
+    b.addEventListener("click",function(){
+      scaleDays=parseInt(this.getAttribute("data-d"),10);
+      Array.prototype.forEach.call($("scaleBar").children,function(x){x.className="sc";});
+      this.className="sc on";
+      renderStats();
+    });
   });
+
+  $("exportbtn").addEventListener("click",doExport);
+  $("backupNow").addEventListener("click",doExport);
+  $("backupHide").addEventListener("click",function(){
+    var m=getMeta(); m.hideUntil=today(); setMeta(m);
+    refreshBackupBar();
+  });
+  $("restorebtn").addEventListener("click",openRestore);
+  $("rsClose").addEventListener("click",function(){$("rsov").classList.remove("open");});
+
   $("importbtn").addEventListener("click",function(){$("fileinput").click();});
   $("fileinput").addEventListener("change",function(e){
     var f=e.target.files[0];if(!f)return;
     var r=new FileReader();
     r.onload=function(){
-      try{var s=JSON.parse(r.result);if(s&&s.habits){state=migrate(s);save();render();}}catch(err){}
+      try{
+        var raw=JSON.parse(r.result);
+        // accept both the wrapped v5 format and the older bare state
+        var s=(raw&&raw.state&&raw.state.habits)?raw.state:raw;
+        if(s&&s.habits){
+          // snapshot current state before overwriting
+          var snaps=getSnaps();
+          snaps.push({date:today(),at:Date.now(),data:JSON.stringify(state)});
+          while(snaps.length>MAXSNAPS) snaps.shift();
+          putSnaps(snaps);
+          state=migrate(s); save(); render();
+        }
+      }catch(err){}
     };
     r.readAsText(f);
+    e.target.value="";
   });
 
-  loadImg();save();render();
+  loadImg();save();
+  snapshotIfNeeded();
+  render();
+  refreshBackupBar();
   setInterval(function(){
     var d=new Date();
-    if(d.getHours()===0&&d.getMinutes()<2)render();
+    if(d.getHours()===0&&d.getMinutes()<2){snapshotIfNeeded();render();refreshBackupBar();}
   },60000);
+  document.addEventListener("visibilitychange",function(){
+    if(!document.hidden){snapshotIfNeeded();refreshBackupBar();}
+  });
 })();
 </script>
 </body>
