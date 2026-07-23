@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -153,6 +153,7 @@
   .ring-c{position:absolute;inset:0;display:flex;flex-direction:column;
     align-items:center;justify-content:center;}
   .ov-time{font-size:47px;font-weight:600;letter-spacing:-.03em;line-height:1;}
+  .ov-time.long{font-size:35px;letter-spacing:-.04em;}
   .ov-of{font-size:11px;color:var(--ink-faint);letter-spacing:.16em;margin-top:8px;}
   .ov-acts{display:flex;gap:10px;margin-top:32px;}
   .ov-acts button{flex:1;background:none;border:1px solid var(--line);color:var(--ink-dim);
@@ -202,41 +203,29 @@
   </section>
 
   <div class="sect"><h2 id="datestr">Today</h2>
-    <span><span class="meta num" style="color:#3ddc97;letter-spacing:.14em">v4 計時版</span>
-    &nbsp;<button id="editbtn">編輯</button></span></div>
+    <button id="editbtn">Edit</button></div>
   <div class="habits" id="habits"></div>
 
   <div class="add">
-    <input id="newname" placeholder="習慣名稱" maxlength="40">
+    <input id="newname" placeholder="Habit name" maxlength="40">
     <div class="row">
       <select id="newdom"></select>
       <select id="newpts">
-        <option value="1">1 分</option><option value="2" selected>2 分</option>
-        <option value="3">3 分</option><option value="5">5 分</option>
+        <option value="1">1 pt</option><option value="2" selected>2 pts</option>
+        <option value="3">3 pts</option><option value="5">5 pts</option>
       </select>
     </div>
-    <select id="newmin">
-      <option value="0" selected>打勾完成(不計時)</option>
-      <option value="5">計時 5 分鐘</option>
-      <option value="10">計時 10 分鐘</option>
-      <option value="15">計時 15 分鐘</option>
-      <option value="20">計時 20 分鐘</option>
-      <option value="25">計時 25 分鐘</option>
-      <option value="30">計時 30 分鐘</option>
-      <option value="45">計時 45 分鐘</option>
-      <option value="60">計時 60 分鐘</option>
-      <option value="90">計時 90 分鐘</option>
-      <option value="120">計時 120 分鐘</option>
-    </select>
-    <button class="btn" id="addbtn">新增習慣</button>
+    <input id="newmin" type="number" inputmode="numeric" min="0" max="540" step="1"
+      value="0" placeholder="Minutes (0 = no timer)">
+    <button class="btn" id="addbtn">Add habit</button>
   </div>
 
   <div class="sect"><h2>Progress.</h2><span class="meta num" id="totalpts">0 pts</span></div>
   <div class="doms" id="domains"></div>
 
   <div class="foot">
-    <span class="num" id="streak">連續 0 天</span>
-    <span><button id="artbtn">換圖</button> · <button id="exportbtn">匯出</button> · <button id="importbtn">匯入</button></span>
+    <span class="num" id="streak">0 day streak</span>
+    <span><button id="artbtn">Image</button> · <button id="exportbtn">Export</button> · <button id="importbtn">Import</button></span>
   </div>
   <input type="file" id="fileinput" accept=".json" style="display:none">
   <input type="file" id="imginput" accept="image/*" style="display:none">
@@ -244,7 +233,7 @@
 
 <div class="ov" id="ov">
   <div class="ov-in">
-    <div class="ov-eye" id="ovEye">專注中</div>
+    <div class="ov-eye" id="ovEye">Focusing</div>
     <div class="ov-name" id="ovName"></div>
     <div class="ring-w">
       <svg viewBox="0 0 120 120">
@@ -258,18 +247,18 @@
       </div>
     </div>
     <div class="ov-acts">
-      <button id="ovStop">暫停離開</button>
-      <button class="primary" id="ovDone" style="display:none">完成</button>
+      <button id="ovStop">Pause</button>
+      <button class="primary" id="ovDone" style="display:none">Done</button>
     </div>
-    <div class="ov-note" id="ovNote">切到其他 App 計時照跑。進度會保留到今天結束。</div>
+    <div class="ov-note" id="ovNote">The timer keeps running if you switch apps. Progress is saved until midnight.</div>
   </div>
 </div>
 
 <div class="ov" id="edov">
   <div class="ov-in">
-    <div class="ov-eye">編輯習慣</div>
+    <div class="ov-eye">Edit habit</div>
     <div class="ov-name" id="edTitle">—</div>
-    <input id="edName" maxlength="40" placeholder="名稱"
+    <input id="edName" maxlength="40" placeholder="Name"
       style="width:100%;background:#070c15;border:1px solid var(--line);color:var(--ink);
       font:inherit;padding:12px;border-radius:10px;margin-bottom:9px;-webkit-appearance:none;text-align:center">
     <div style="display:flex;gap:9px;margin-bottom:9px">
@@ -277,24 +266,22 @@
         color:var(--ink);font:inherit;padding:12px;border-radius:10px;-webkit-appearance:none"></select>
       <select id="edPts" style="flex:1;background:#070c15;border:1px solid var(--line);
         color:var(--ink);font:inherit;padding:12px;border-radius:10px;-webkit-appearance:none">
-        <option value="1">1 分</option><option value="2">2 分</option>
-        <option value="3">3 分</option><option value="5">5 分</option>
+        <option value="1">1 pt</option><option value="2">2 pts</option>
+        <option value="3">3 pts</option><option value="5">5 pts</option>
       </select>
     </div>
-    <select id="edMin" style="width:100%;background:#070c15;border:1px solid var(--line);
-      color:var(--ink);font:inherit;padding:12px;border-radius:10px;-webkit-appearance:none">
-      <option value="0">打勾完成(不計時)</option>
-      <option value="5">計時 5 分鐘</option><option value="10">計時 10 分鐘</option>
-      <option value="15">計時 15 分鐘</option><option value="20">計時 20 分鐘</option>
-      <option value="25">計時 25 分鐘</option><option value="30">計時 30 分鐘</option>
-      <option value="45">計時 45 分鐘</option><option value="60">計時 60 分鐘</option>
-      <option value="90">計時 90 分鐘</option><option value="120">計時 120 分鐘</option>
-    </select>
+    <input id="edMin" type="number" inputmode="numeric" min="0" max="540" step="1"
+      placeholder="Minutes (0 = no timer)"
+      style="width:100%;background:#070c15;border:1px solid var(--line);
+      color:var(--ink);font:inherit;padding:12px;border-radius:10px;
+      -webkit-appearance:none;text-align:center">
+    <div id="edHint" style="font-size:11px;color:var(--ink-faint);margin-top:7px;letter-spacing:.08em">
+      Checkbox — no timer</div>
     <div class="ov-acts" style="margin-top:20px">
-      <button id="edCancel">取消</button>
-      <button class="primary" id="edSave">儲存</button>
+      <button id="edCancel">Cancel</button>
+      <button class="primary" id="edSave">Save</button>
     </div>
-    <div class="ov-note">改成計時型後,卡片圖示會變成 ▶。</div>
+    <div class="ov-note">Enter 0 for a checkbox, or 1–540 minutes for a timer.</div>
   </div>
 </div>
 
@@ -303,11 +290,11 @@
   "use strict";
 
   var DOMAINS=[
-    {id:"body",name:"身體",color:"#3ddc97"},
-    {id:"mind",name:"心智",color:"#4da3ff"},
-    {id:"work",name:"產出",color:"#a97bff"},
-    {id:"order",name:"秩序",color:"#ff8a4d"},
-    {id:"calm",name:"節制",color:"#ff5d73"}
+    {id:"body",name:"Body",color:"#3ddc97"},
+    {id:"mind",name:"Mind",color:"#4da3ff"},
+    {id:"work",name:"Craft",color:"#a97bff"},
+    {id:"order",name:"Order",color:"#ff8a4d"},
+    {id:"calm",name:"Restraint",color:"#ff5d73"}
   ];
   var RANKS=[
     {at:0,name:"Initiate",tier:"IRON"},{at:3,name:"Adept",tier:"BRONZE"},
@@ -317,16 +304,26 @@
   ];
   var ROMAN=["IV","III","II","I"];
   var SEED=[
-    {name:"運動 1 小時",dom:"body",pts:3,min:60},
-    {name:"睡滿 7 小時",dom:"body",pts:2,min:0},
-    {name:"閱讀 20 分鐘",dom:"mind",pts:2,min:20},
-    {name:"深度工作 2 小時",dom:"work",pts:3,min:120},
-    {name:"整理環境",dom:"order",pts:1,min:0},
-    {name:"螢幕時間 < 4 小時",dom:"calm",pts:2,min:0}
+    {name:"Work out for 1 hour",dom:"body",pts:3,min:60},
+    {name:"Sleep 7+ hours",dom:"body",pts:2,min:0},
+    {name:"Read for 20 minutes",dom:"mind",pts:2,min:20},
+    {name:"Deep work for 2 hours",dom:"work",pts:3,min:120},
+    {name:"Tidy your space",dom:"order",pts:1,min:0},
+    {name:"Screen time < 4 hours",dom:"calm",pts:2,min:0}
   ];
 
   var MISS_PENALTY=0.5,FLOOR=0,PER_LEVEL=100;
   var KEY="ascend.v3",IMGKEY="ascend.v2.img";
+  var LEGACY={
+    "\u904B\u52D5 1 \u5C0F\u6642":{name:"Work out for 1 hour",min:60},
+    "\u904B\u52D5 30 \u5206\u9418":{name:"Work out for 30 minutes",min:30},
+    "\u7761\u6EFF 7 \u5C0F\u6642":{name:"Sleep 7+ hours",min:0},
+    "\u95B1\u8B80 20 \u5206\u9418":{name:"Read for 20 minutes",min:20},
+    "\u6DF1\u5EA6\u5DE5\u4F5C 2 \u5C0F\u6642":{name:"Deep work for 2 hours",min:120},
+    "\u6574\u7406\u74B0\u5883":{name:"Tidy your space",min:0},
+    "\u793E\u7FA4 < 1 \u5C0F\u6642":{name:"Social media < 1 hour",min:0},
+    "\u87A2\u5E55\u6642\u9593 < 4 \u5C0F\u6642":{name:"Screen time < 4 hours",min:0}
+  };
   var state=load();
 
   function load(){
@@ -342,19 +339,40 @@
       return {id:"h"+i+"_"+Date.now(),name:h.name,dom:h.dom,pts:h.pts,min:h.min};
     }),log:{},time:{},created:today()};
   }
+  function cleanMin(v){
+    var n=parseInt(v,10);
+    if(!isFinite(n)||n<0) n=0;
+    return Math.min(540,n);
+  }
+  function minLabel(n){
+    if(n<=0) return "Checkbox — no timer";
+    if(n<60) return "Timer — "+n+" min";
+    var h=Math.floor(n/60),m=n%60;
+    return "Timer — "+h+"h"+(m?" "+m+"m":"")+" ("+n+" min)";
+  }
+  function shortMin(n){
+    if(n<60) return n+" min";
+    var h=Math.floor(n/60),m=n%60;
+    return h+"h"+(m?" "+m+"m":"");
+  }
   function guessMin(name){
-    if(/[<＜≤]/.test(name)) return 0;
-    if(/睡|起床|就寢/.test(name)) return 0;
-    var m=name.match(/(\d+(?:\.\d+)?)\s*(分鐘|分|min|mins|minutes)/i);
-    if(m) return Math.min(240,Math.round(parseFloat(m[1])));
-    m=name.match(/(\d+(?:\.\d+)?)\s*(小時|小时|hrs?|hours?)/i);
-    if(m) return Math.min(240,Math.round(parseFloat(m[1])*60));
+    if(/[<>≤≥]/.test(name)) return 0;
+    if(/sleep|wake|bed|rise/i.test(name)) return 0;
+    var m=name.match(/(\d+(?:\.\d+)?)\s*(minutes?|mins?|m)\b/i);
+    if(m) return Math.min(540,Math.round(parseFloat(m[1])));
+    m=name.match(/(\d+(?:\.\d+)?)\s*(hours?|hrs?)\b/i);
+    if(m) return Math.min(540,Math.round(parseFloat(m[1])*60));
     m=name.match(/(\d+(?:\.\d+)?)\s*h(?![a-z])/i);
-    if(m) return Math.min(240,Math.round(parseFloat(m[1])*60));
+    if(m) return Math.min(540,Math.round(parseFloat(m[1])*60));
     return 0;
   }
   function migrate(s){
     s.habits.forEach(function(h){
+      var L=LEGACY[h.name];
+      if(L){
+        h.name=L.name;
+        if(typeof h.min!=="number") h.min=L.min;
+      }
       if(typeof h.min!=="number") h.min=guessMin(h.name);
     });
     if(!s.time)s.time={};
@@ -410,7 +428,10 @@
     if(!run)return;
     var e=Math.min(run.target,elapsed()), left=run.target-e;
     var ov=$("ov");
-    $("ovTime").textContent=fmt(left);
+    var txt=fmt(left);
+    var tEl=$("ovTime");
+    tEl.textContent=txt;
+    if(txt.length>5) tEl.classList.add("long"); else tEl.classList.remove("long");
     $("ovOf").textContent=fmt(e)+" / "+fmt(run.target);
     var C=2*Math.PI*52;
     $("ovRing").setAttribute("stroke-dashoffset",String(C*(1-e/run.target)));
@@ -433,11 +454,11 @@
     save();
     var ov=$("ov");
     ov.classList.add("done");
-    $("ovEye").textContent="完成";
+    $("ovEye").textContent="Complete";
     $("ovTime").textContent="00:00";
     $("ovStop").style.display="none";
     $("ovDone").style.display="block";
-    $("ovNote").textContent="已記入今日進度。";
+    $("ovNote").textContent="Logged for today.";
     buzz(); beep();
     run=null;
     render();
@@ -501,11 +522,11 @@
     ov.classList.add("open");
     ov.style.setProperty("--dc",dm.color);
     ov.style.setProperty("--ovc",hexA(dm.color,.18));
-    $("ovEye").textContent="專注中";
+    $("ovEye").textContent="Focusing";
     $("ovName").textContent=h.name;
     $("ovStop").style.display="block";
     $("ovDone").style.display="none";
-    $("ovNote").textContent="切到其他 App 計時照跑。進度會保留到今天結束。";
+    $("ovNote").textContent="The timer keeps running if you switch apps. Progress is saved until midnight.";
   }
   function closeOverlay(){
     var ov=$("ov");
@@ -594,7 +615,7 @@
 
     var done=doneSet(today()),hc=$("habits");
     hc.innerHTML="";
-    if(!state.habits.length)hc.innerHTML='<div class="empty">還沒有習慣。點「編輯」新增。</div>';
+    if(!state.habits.length)hc.innerHTML='<div class="empty">No habits yet. Tap Edit to add one.</div>';
     state.habits.forEach(function(h){
       var on=done.indexOf(h.id)>-1;
       var dm=DOMAINS.filter(function(x){return x.id===h.dom;})[0]||DOMAINS[0];
@@ -606,14 +627,14 @@
       var sub=dm.name+" · +"+h.pts;
       if(timed&&!on){
         sub+= have>0 ? " · <b>"+fmt(have)+" / "+fmt(target)+"</b>"
-                     : " · "+h.min+" 分鐘";
+                     : " · "+shortMin(h.min);
       }else if(timed&&on){
-        sub+=" · "+h.min+" 分鐘 ✓";
+        sub+=" · "+shortMin(h.min)+" ✓";
       }
 
       el.innerHTML='<div class="prog"></div><div class="gem"></div>'+
         '<div class="hb-body"><div class="hb-name"></div><div class="hb-sub"></div></div>'+
-        '<button class="del" aria-label="刪除">&times;</button>'+
+        '<button class="del" aria-label="Delete">&times;</button>'+
         '<div class="tick'+(timed&&!on?" play":"")+'">'+(timed&&!on?PLAY:CHECK)+'</div>';
       el.querySelector(".hb-name").textContent=h.name;
       el.querySelector(".hb-sub").innerHTML=sub;
@@ -648,7 +669,8 @@
     });
 
     var p=pending();
-    $("streak").textContent="連續 "+streak()+" 天"+(p>0?"　今日 −"+(Math.round(p*10)/10):"");
+    var stk=streak();
+    $("streak").textContent=stk+" day streak"+(p>0?"   today −"+(Math.round(p*10)/10):"");
   }
 
   function removeHabit(id){
@@ -674,8 +696,12 @@
     $("edDom").value=h.dom;
     $("edPts").value=String(h.pts);
     $("edMin").value=String(h.min||0);
+    $("edHint").textContent=minLabel(h.min||0);
     ov.classList.add("open");
   }
+  $("edMin").addEventListener("input",function(){
+    $("edHint").textContent=minLabel(cleanMin(this.value));
+  });
   $("edCancel").addEventListener("click",function(){
     $("edov").classList.remove("open"); editingId=null;
   });
@@ -686,7 +712,7 @@
       if(n)h.name=n;
       h.dom=$("edDom").value;
       h.pts=parseInt($("edPts").value,10);
-      var nm=parseInt($("edMin").value,10);
+      var nm=cleanMin($("edMin").value);
       if(nm!==h.min){
         var dk=today();
         if(state.time[dk])delete state.time[dk][editingId];
@@ -725,7 +751,7 @@
         var data=c.toDataURL("image/jpeg",.82);
         try{localStorage.setItem(IMGKEY,data);$("heroimg").src=data;
           $("art").classList.add("has-img");}
-        catch(err){alert("圖片太大,存不下。換一張小一點的。");}
+        catch(err){alert("That image is too large to store. Try a smaller one.");}
       };
       img.src=r.result;
     };
@@ -741,13 +767,13 @@
   });
   $("editbtn").addEventListener("click",function(){
     var on=document.body.classList.toggle("editing");
-    this.textContent=on?"完成":"編輯";
+    this.textContent=on?"Done":"Edit";
   });
   $("addbtn").addEventListener("click",function(){
     var n=$("newname").value.trim();if(!n)return;
     state.habits.push({id:"h"+Date.now(),name:n,dom:$("newdom").value,
-      pts:parseInt($("newpts").value,10),min:parseInt($("newmin").value,10)});
-    $("newname").value="";save();render();
+      pts:parseInt($("newpts").value,10),min:cleanMin($("newmin").value)});
+    $("newname").value="";$("newmin").value="0";save();render();
   });
   $("exportbtn").addEventListener("click",function(){
     var b=new Blob([JSON.stringify(state,null,2)],{type:"application/json"});
