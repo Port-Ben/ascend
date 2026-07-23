@@ -48,6 +48,11 @@
   .sg-spin{transform-origin:50% 50%;animation:sgspin 16s linear infinite;}
   .sg-spin-r{transform-origin:50% 50%;animation:sgspin 24s linear infinite reverse;}
   .sg-pulse{animation:sgpulse 2.6s ease-in-out infinite;transform-origin:50% 50%;}
+  /* Halt all sigil motion when the app is backgrounded or the sigil is
+     scrolled out of view. Saves CPU/battery; visuals are unchanged when idle. */
+  body.anim-off .sg-spin,
+  body.anim-off .sg-spin-r,
+  body.anim-off .sg-pulse{animation-play-state:paused;}
   @keyframes sgspin{to{transform:rotate(360deg);}}
   @keyframes sgpulse{0%,100%{opacity:.55;}50%{opacity:1;}}
   .lvl{font-size:40px;font-weight:600;letter-spacing:-.02em;line-height:1.05;
@@ -238,7 +243,7 @@
 <div class="wrap">
 
   <section class="hero">
-    <div class="hero-title">Home.</div>
+    <div class="hero-title">BEN</div>
     <div class="hero-art" id="art">
       <img id="heroimg" alt="">
       <div class="fallback" id="fallbackSigil"></div>
@@ -651,22 +656,39 @@
     var have=acc(h.id,dk), target=h.min*60;
     if(have>=target){markDone(h.id,false,dk);return;}
     run={id:h.id,startedAt:Date.now(),base:have,target:target,day:dk};
+    lastLeft=-1;
     openOverlay(h);
-    tickHandle=setInterval(tick,250);
+    scheduleTick();
     tick();
   }
 
+  // Align each tick to the next whole second so the display never
+  // appears to skip, while still only waking once per second.
+  function scheduleTick(){
+    stopClock();
+    if(!run) return;
+    var ms=1000-((Date.now()-run.startedAt)%1000);
+    tickHandle=setTimeout(function(){
+      tick();
+      if(run) scheduleTick();
+    },ms);
+  }
+
+  var lastLeft=-1;
   function tick(){
     if(!run)return;
     var e=Math.min(run.target,elapsed()), left=run.target-e;
     var ov=$("ov");
-    var txt=fmt(left);
-    var tEl=$("ovTime");
-    tEl.textContent=txt;
-    if(txt.length>5) tEl.classList.add("long"); else tEl.classList.remove("long");
-    $("ovOf").textContent=fmt(e)+" / "+fmt(run.target);
-    var C=2*Math.PI*52;
-    $("ovRing").setAttribute("stroke-dashoffset",String(C*(1-e/run.target)));
+    if(left!==lastLeft){
+      lastLeft=left;
+      var txt=fmt(left);
+      var tEl=$("ovTime");
+      tEl.textContent=txt;
+      if(txt.length>5) tEl.classList.add("long"); else tEl.classList.remove("long");
+      $("ovOf").textContent=fmt(e)+" / "+fmt(run.target);
+      var C=2*Math.PI*52;
+      $("ovRing").setAttribute("stroke-dashoffset",String(C*(1-e/run.target)));
+    }
     if(left<=0&&!ov.classList.contains("done")) finish();
   }
 
@@ -696,7 +718,7 @@
   }
 
   function stopClock(){
-    if(tickHandle){clearInterval(tickHandle);tickHandle=null;}
+    if(tickHandle){clearTimeout(tickHandle);tickHandle=null;}
   }
 
   /* pause & keep progress */
@@ -1488,11 +1510,31 @@
   $("ovStop").addEventListener("click",pauseTimer);
   $("ovDone").addEventListener("click",function(){closeOverlay();render();});
 
+  /* ---- animation power saving ---- */
+  // Motion is paused whenever the app is backgrounded, or the sigil has been
+  // scrolled off screen. Both are pure savings: nothing is visible either way.
+  var sigilVisible=true;
+  function syncAnim(){
+    var off=document.hidden||!sigilVisible;
+    document.body.classList[off?"add":"remove"]("anim-off");
+  }
+  document.addEventListener("visibilitychange",syncAnim);
+  if(window.IntersectionObserver){
+    try{
+      var io=new IntersectionObserver(function(es){
+        sigilVisible=es[0].isIntersecting;
+        syncAnim();
+      },{threshold:0.01});
+      io.observe($("art"));
+    }catch(e){}
+  }
+  syncAnim();
+
   /* resync after backgrounding */
   document.addEventListener("visibilitychange",function(){
-    if(!document.hidden&&run)tick();
+    if(!document.hidden&&run){tick();scheduleTick();}
   });
-  window.addEventListener("pageshow",function(){if(run)tick();});
+  window.addEventListener("pageshow",function(){if(run){tick();scheduleTick();}});
 
   /* image */
   function loadImg(){
@@ -1583,10 +1625,16 @@
   snapshotIfNeeded();
   render();
   refreshBackupBar();
-  setInterval(function(){
-    var d=new Date();
-    if(d.getHours()===0&&d.getMinutes()<2){snapshotIfNeeded();render();refreshBackupBar();}
-  },60000);
+  // Wake once at midnight instead of polling every minute.
+  function scheduleMidnight(){
+    var now=new Date();
+    var next=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1,0,0,5);
+    setTimeout(function(){
+      snapshotIfNeeded(); render(); refreshBackupBar();
+      scheduleMidnight();
+    },Math.max(1000,next-now));
+  }
+  scheduleMidnight();
   document.addEventListener("visibilitychange",function(){
     if(!document.hidden){snapshotIfNeeded();refreshBackupBar();}
   });
