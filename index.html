@@ -37,12 +37,19 @@
   .hero-art img{width:100%;height:100%;object-fit:cover;object-position:center 22%;display:none;}
   .hero-art.has-img img{display:block;}
   .hero-art.has-img .fallback{display:none;}
-  .fallback{width:190px;opacity:.92;}
+  .fallback{width:190px;height:210px;opacity:.95;}
+  .fallback svg{width:100%;height:100%;display:block;}
   .hero-art::after{content:"";position:absolute;left:0;right:0;bottom:0;height:62%;
     background:linear-gradient(180deg,transparent,#05070c 88%);pointer-events:none;}
   .hero-id{position:relative;z-index:2;margin-top:-64px;padding:0 18px 16px;text-align:center;}
+  .rank-line{display:flex;align-items:center;justify-content:center;margin-bottom:3px;}
   .rank-eyebrow{font-size:10px;letter-spacing:.28em;text-transform:uppercase;
-    color:var(--cy);text-shadow:0 0 12px var(--cy-soft);margin-bottom:2px;}
+    color:var(--sg,var(--cy));text-shadow:0 0 12px var(--sg,var(--cy-soft));}
+  .sg-spin{transform-origin:50% 50%;animation:sgspin 16s linear infinite;}
+  .sg-spin-r{transform-origin:50% 50%;animation:sgspin 24s linear infinite reverse;}
+  .sg-pulse{animation:sgpulse 2.6s ease-in-out infinite;transform-origin:50% 50%;}
+  @keyframes sgspin{to{transform:rotate(360deg);}}
+  @keyframes sgpulse{0%,100%{opacity:.55;}50%{opacity:1;}}
   .lvl{font-size:40px;font-weight:600;letter-spacing:-.02em;line-height:1.05;
     text-shadow:0 0 26px rgba(77,163,255,.45);}
   .tier{font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--ink-dim);margin-top:3px;}
@@ -231,22 +238,15 @@
 <div class="wrap">
 
   <section class="hero">
-    <div class="hero-title">BEN</div>
+    <div class="hero-title">Home.</div>
     <div class="hero-art" id="art">
       <img id="heroimg" alt="">
-      <svg class="fallback" viewBox="0 0 200 240" fill="none" aria-hidden="true">
-        <ellipse cx="100" cy="228" rx="52" ry="7" fill="#4da3ff" opacity=".16"/>
-        <path d="M100 26 L138 74 L128 176 L100 206 L72 176 L62 74 Z" fill="#0f1b2c" stroke="#2b7fd4" stroke-width="1.5"/>
-        <path d="M100 26 L138 74 L100 92 L62 74 Z" fill="#16283f" stroke="#4da3ff" stroke-width="1.5"/>
-        <path d="M100 92 L128 176 L100 206 L72 176 Z" fill="#0b1626" stroke="#2b7fd4" stroke-width="1.2"/>
-        <path d="M100 46 L100 186" stroke="#4da3ff" stroke-width="1" opacity=".5"/>
-        <circle cx="100" cy="120" r="17" fill="#05070c" stroke="#4da3ff" stroke-width="1.5"/>
-        <circle cx="100" cy="120" r="7" fill="#4da3ff" opacity=".85"/>
-        <path d="M84 74 L60 96 M116 74 L140 96" stroke="#2b7fd4" stroke-width="1.2" opacity=".7"/>
-      </svg>
+      <div class="fallback" id="fallbackSigil"></div>
     </div>
     <div class="hero-id">
-      <div class="rank-eyebrow" id="rankname">Initiate</div>
+      <div class="rank-line">
+        <span class="rank-eyebrow" id="rankname">Initiate</span>
+      </div>
       <div class="lvl num">Level <span id="level">1</span></div>
       <div class="tier" id="tier">IRON IV</div>
     </div>
@@ -624,19 +624,21 @@
     return null;
   }
 
-  /* ---- accumulated seconds for a habit today ---- */
-  function acc(id){
-    var t=state.time[today()];
+  /* ---- accumulated seconds for a habit on a given day ---- */
+  function acc(id,dk){
+    var t=state.time[dk||today()];
     return (t&&t[id])||0;
   }
-  function addAcc(id,sec){
-    var dk=today();
+  function addAcc(id,sec,dk){
+    dk=dk||today();
     if(!state.time[dk])state.time[dk]={};
     state.time[dk][id]=(state.time[dk][id]||0)+sec;
   }
 
   /* ---- timer session ---- */
-  var run=null;   // {id, startedAt, base, target}
+  // A session is pinned to the day it STARTED. Crossing midnight keeps
+  // crediting the start day, so a 23:30 session doesn't split in two.
+  var run=null;   // {id, startedAt, base, target, day}
   var tickHandle=null;
 
   function elapsed(){
@@ -645,9 +647,10 @@
   }
 
   function startTimer(h){
-    var have=acc(h.id), target=h.min*60;
-    if(have>=target){markDone(h.id);return;}
-    run={id:h.id,startedAt:Date.now(),base:have,target:target};
+    var dk=today();
+    var have=acc(h.id,dk), target=h.min*60;
+    if(have>=target){markDone(h.id,false,dk);return;}
+    run={id:h.id,startedAt:Date.now(),base:have,target:target,day:dk};
     openOverlay(h);
     tickHandle=setInterval(tick,250);
     tick();
@@ -674,12 +677,11 @@
   }
 
   function finish(){
-    var id=run.id;
+    var id=run.id, dk=run.day;
     stopClock();
-    var dk=today();
     if(!state.time[dk])state.time[dk]={};
     state.time[dk][id]=habitById(id).min*60;
-    markDone(id,true);
+    markDone(id,true,dk);
     save();
     var ov=$("ov");
     ov.classList.add("done");
@@ -687,7 +689,7 @@
     $("ovTime").textContent="00:00";
     $("ovStop").style.display="none";
     $("ovDone").style.display="block";
-    $("ovNote").textContent="Logged for today.";
+    $("ovNote").textContent=(dk===today())?"Logged for today.":"Logged for "+dk+".";
     buzz(); beep();
     run=null;
     render();
@@ -701,15 +703,16 @@
   function pauseTimer(){
     if(run){
       var gained=Math.min(run.target,elapsed())-run.base;
-      if(gained>0)addAcc(run.id,gained);
+      if(gained>0)addAcc(run.id,gained,run.day);
       save();
     }
     stopClock(); run=null;
     closeOverlay(); render();
   }
 
-  function markDone(id,silent){
-    var dk=today(),a=state.log[dk]||[];
+  function markDone(id,silent,dk){
+    dk=dk||today();
+    var a=state.log[dk]||[];
     if(a.indexOf(id)<0)a.push(id);
     state.log[dk]=a; save();
     if(!silent&&navigator.vibrate)navigator.vibrate(9);
@@ -813,6 +816,7 @@
     var rk=rankFor(lvl);
     $("level").textContent=lvl;
     $("rankname").textContent=rk.name;
+    renderSigil(rk.name);
     $("tier").textContent=rk.tier;
     $("totalpts").textContent=s.total+" pts";
     $("xpfill").style.width=(into/PER_LEVEL*100)+"%";
@@ -848,7 +852,8 @@
     state.habits.forEach(function(h){
       var on=done.indexOf(h.id)>-1;
       var dm=DOMAINS.filter(function(x){return x.id===h.dom;})[0]||DOMAINS[0];
-      var timed=h.min>0, have=acc(h.id), target=h.min*60;
+      var running=(run&&run.id===h.id);
+      var timed=h.min>0, have=acc(h.id,running?run.day:null), target=h.min*60;
       var el=document.createElement("div");
       el.className="hb"+(on?" on":"")+(run&&run.id===h.id?" running":"");
       el.style.setProperty("--dc",dm.color);
@@ -1116,6 +1121,317 @@
     $("tabHome").className="tab"+(home?" on":"");
     $("tabStats").className="tab"+(home?"":" on");
     if(!home) renderStats();
+  }
+
+  /* ================= RANK SIGILS ================= */
+  // Faceted crystal + runic ward sigil generator
+  // Hero-only sigil: faceted crystal + layered runic ward.
+  var SIGIL=[
+    {i:0,name:"Initiate", c:"#8798ae",c2:"#3d4a5c",c3:"#161d29",
+     core:0,facet:1,ward:0,runes:0,glyph:0,spikes:0,orbit:0,crown:0,
+     inner:0,frac:0,beam:0,base:1,motes:0,arc:0},
+    {i:1,name:"Adept",    c:"#e0a355",c2:"#8a5c26",c3:"#241708",
+     core:1,facet:2,ward:1,runes:0,glyph:1,spikes:0,orbit:0,crown:0,
+     inner:0,frac:1,beam:0,base:1,motes:0,arc:0},
+    {i:2,name:"Hunter",   c:"#dde6f2",c2:"#77869a",c3:"#161d28",
+     core:1,facet:2,ward:1,runes:1,glyph:1,spikes:1,orbit:0,crown:0,
+     inner:1,frac:1,beam:0,base:2,motes:0,arc:1},
+    {i:3,name:"Awakened", c:"#f7bd33",c2:"#9c6a0d",c3:"#271b05",
+     core:2,facet:3,ward:2,runes:1,glyph:2,spikes:1,orbit:0,crown:0,
+     inner:1,frac:1,beam:1,base:2,motes:1,arc:1},
+    {i:4,name:"Ascendant",c:"#5cadff",c2:"#1d5fa8",c3:"#091a2c",
+     core:2,facet:3,ward:2,runes:2,glyph:2,spikes:1,orbit:1,crown:0,
+     inner:2,frac:2,beam:1,base:2,motes:1,arc:2},
+    {i:5,name:"Immortal", c:"#b98cff",c2:"#6941b5",c3:"#180e2b",
+     core:3,facet:4,ward:3,runes:2,glyph:3,spikes:1,orbit:1,crown:0,
+     inner:2,frac:2,beam:2,base:3,motes:2,arc:2},
+    {i:6,name:"Sovereign",c:"#f4f8ff",c2:"#9db4dd",c3:"#151b29",
+     core:3,facet:4,ward:3,runes:3,glyph:3,spikes:1,orbit:1,crown:1,
+     inner:2,frac:2,beam:2,base:3,motes:2,arc:2}
+  ];
+
+  // Per-rank silhouettes. Each is asymmetric and tells a stage of the arc:
+  // squat broken shard -> upright gem -> tall faceted spire.
+  // Format: {v:[[x,y],...] clockwise from apex, hub:[x,y]}
+  var SHAPE={
+    // 0 Initiate: squat blunt stone. 6 faces.
+    Initiate:{v:[[50,24],[70,38],[70,58],[50,79],[30,58],[30,38]],hub:[50,48]},
+    // 1 Adept: taller hexagonal gem. 6 faces.
+    Adept:{v:[[50,17],[71,34],[71,60],[50,83],[29,60],[29,34]],hub:[50,48]},
+    // 2 Hunter: lean blade-like gem. 6 faces.
+    Hunter:{v:[[50,12],[71,32],[68,58],[50,88],[32,58],[29,32]],hub:[50,47]},
+    // 3 Awakened: wider crown facet added. 8 faces.
+    Awakened:{v:[[50,11],[63,19],[74,40],[70,60],[50,88],[30,60],[26,40],[37,19]],hub:[50,47]},
+    // 4 Ascendant: elongated, narrow waist. 8 faces.
+    Ascendant:{v:[[50,7],[64,17],[75,42],[68,63],[50,92],[32,63],[25,42],[36,17]],hub:[50,46]},
+    // 5 Immortal: ten faces, deeper taper.
+    Immortal:{v:[[50,5],[62,13],[74,32],[76,52],[64,71],[50,93],[36,71],[24,52],[26,32],[38,13]],hub:[50,46]},
+    // 6 Sovereign: tallest, ten faces, widest span.
+    Sovereign:{v:[[50,4],[63,11],[76,30],[79,52],[66,72],[50,94],[34,72],[21,52],[24,30],[37,11]],hub:[50,45]}
+  };
+  function shapeFor(name){ return SHAPE[name]||SHAPE.Initiate; }
+  function pathOf(v){
+    var d='M'+v[0][0]+' '+v[0][1],i;
+    for(i=1;i<v.length;i++) d+=' L'+v[i][0]+' '+v[i][1];
+    return d+' Z';
+  }
+
+  function sigilFor(n){
+    for(var i=0;i<SIGIL.length;i++) if(SIGIL[i].name===n) return SIGIL[i];
+    return SIGIL[0];
+  }
+
+  function sgPolar(r,a){
+    return [(50+Math.cos(a)*r),(50+Math.sin(a)*r)];
+  }
+
+  function runeRing(r,count,C,w,op,rot,len){
+    var s='',i,a,p1,p2;
+    len=len||3;
+    for(i=0;i<count;i++){
+      a=(i/count)*Math.PI*2+(rot||0);
+      p1=sgPolar(r-len,a); p2=sgPolar(r+len,a);
+      s+='<line x1="'+p1[0].toFixed(1)+'" y1="'+p1[1].toFixed(1)+
+         '" x2="'+p2[0].toFixed(1)+'" y2="'+p2[1].toFixed(1)+
+         '" stroke="'+C+'" stroke-width="'+w+'" opacity="'+op+'" stroke-linecap="round"/>';
+    }
+    return s;
+  }
+
+  function glyphMarks(r,count,C,op,rot,size){
+    var s='',i,a,p;
+    for(i=0;i<count;i++){
+      a=(i/count)*Math.PI*2+(rot||0);
+      p=sgPolar(r,a);
+      s+='<g transform="translate('+p[0].toFixed(1)+' '+p[1].toFixed(1)+') rotate('+
+         ((a*180/Math.PI)+90).toFixed(0)+')">'+
+         '<path d="M0 -'+size+' L'+(size*0.72).toFixed(1)+' '+(size*0.6).toFixed(1)+
+         ' L-'+(size*0.72).toFixed(1)+' '+(size*0.6).toFixed(1)+' Z" '+
+         'fill="none" stroke="'+C+'" stroke-width=".9" opacity="'+op+'"/></g>';
+    }
+    return s;
+  }
+
+  function arcSeg(r,a0,a1,C,w,op){
+    var p0=sgPolar(r,a0), p1=sgPolar(r,a1);
+    var large=(a1-a0)>Math.PI?1:0;
+    return '<path d="M'+p0[0].toFixed(1)+' '+p0[1].toFixed(1)+
+           ' A'+r+' '+r+' 0 '+large+' 1 '+p1[0].toFixed(1)+' '+p1[1].toFixed(1)+
+           '" fill="none" stroke="'+C+'" stroke-width="'+w+'" opacity="'+op+
+           '" stroke-linecap="round"/>';
+  }
+
+  function sigilSVG(sg,mode){
+    var C=sg.c, C2=sg.c2, C3=sg.c3;
+    var uid='sg'+sg.i+(mode==='hero'?'h':'b');
+    var o='';
+    var TAU=Math.PI*2;
+
+    o+='<defs>'+
+       '<linearGradient id="'+uid+'f1" x1=".1" y1="0" x2=".7" y2="1">'+
+         '<stop offset="0" stop-color="'+C+'" stop-opacity=".62"/>'+
+         '<stop offset="1" stop-color="'+C2+'" stop-opacity=".14"/></linearGradient>'+
+       '<linearGradient id="'+uid+'f2" x1="1" y1="0" x2=".2" y2="1">'+
+         '<stop offset="0" stop-color="'+C2+'" stop-opacity=".5"/>'+
+         '<stop offset="1" stop-color="'+C3+'" stop-opacity=".92"/></linearGradient>'+
+       '<linearGradient id="'+uid+'f3" x1="0" y1="1" x2=".5" y2="0">'+
+         '<stop offset="0" stop-color="'+C+'" stop-opacity=".34"/>'+
+         '<stop offset="1" stop-color="'+C3+'" stop-opacity=".88"/></linearGradient>'+
+       '<radialGradient id="'+uid+'gl"><stop offset="0" stop-color="'+C+'" stop-opacity=".85"/>'+
+         '<stop offset=".55" stop-color="'+C+'" stop-opacity=".18"/>'+
+         '<stop offset="1" stop-color="'+C+'" stop-opacity="0"/></radialGradient>'+
+       '<linearGradient id="'+uid+'bm" x1=".5" y1="0" x2=".5" y2="1">'+
+         '<stop offset="0" stop-color="'+C+'" stop-opacity=".55"/>'+
+         '<stop offset="1" stop-color="'+C+'" stop-opacity="0"/></linearGradient>'+
+       '</defs>';
+
+    /* ---- outer ward rings ---- */
+    if(sg.ward>=1)
+      o+='<circle cx="50" cy="50" r="46" fill="none" stroke="'+C2+
+         '" stroke-width=".8" opacity=".5"/>';
+    if(sg.ward>=2)
+      o+='<g class="sg-spin"><circle cx="50" cy="50" r="48.6" fill="none" stroke="'+C+
+         '" stroke-width=".7" stroke-dasharray="1.2 5" opacity=".72"/></g>';
+    if(sg.ward>=3){
+      o+='<g class="sg-spin-r"><circle cx="50" cy="50" r="43.2" fill="none" stroke="'+C+
+         '" stroke-width=".6" stroke-dasharray="10 6" opacity=".42"/></g>'+
+         '<circle cx="50" cy="50" r="40.4" fill="none" stroke="'+C2+
+         '" stroke-width=".5" opacity=".3"/>';
+    }
+
+    /* ---- broken arcs ---- */
+    if(sg.arc>=1)
+      o+='<g class="sg-spin-r">'+arcSeg(38.5,-0.42,0.42,C,'1.1','.55')+
+         arcSeg(38.5,Math.PI-0.42,Math.PI+0.42,C,'1.1','.55')+'</g>';
+    if(sg.arc>=2)
+      o+='<g class="sg-spin">'+arcSeg(34.5,TAU*0.20,TAU*0.30,C,'.9','.4')+
+         arcSeg(34.5,TAU*0.70,TAU*0.80,C,'.9','.4')+'</g>';
+
+    /* ---- rune ticks ---- */
+    if(sg.runes>=1) o+='<g class="sg-spin-r">'+runeRing(46,16,C,'.75','.55',0,2.6)+'</g>';
+    if(sg.runes>=2) o+='<g class="sg-spin">'+runeRing(40.4,8,C,'.9','.5',0.39,3.2)+'</g>';
+    if(sg.runes>=3) o+='<g class="sg-spin-r">'+glyphMarks(43.2,6,C,'.55',0.26,2.6)+'</g>';
+
+    /* ---- orbiting shards ---- */
+    if(sg.orbit)
+      o+='<g class="sg-spin">'+
+         '<path d="M50 0.6 l3.1 5.4 -6.2 0 Z" fill="'+C+'" opacity=".95"/>'+
+         '<path d="M99.4 50 l-5.4 3.1 0 -6.2 Z" fill="'+C+'" opacity=".78"/>'+
+         '<path d="M50 99.4 l-3.1 -5.4 6.2 0 Z" fill="'+C+'" opacity=".95"/>'+
+         '<path d="M0.6 50 l5.4 -3.1 0 6.2 Z" fill="'+C+'" opacity=".78"/></g>';
+
+    /* ---- motes ---- */
+    if(sg.motes>=1)
+      o+='<g class="sg-spin-r">'+
+         '<circle cx="50" cy="18" r="1.15" fill="'+C+'" opacity=".8"/>'+
+         '<circle cx="82" cy="50" r="1.15" fill="'+C+'" opacity=".8"/>'+
+         '<circle cx="50" cy="82" r="1.15" fill="'+C+'" opacity=".8"/>'+
+         '<circle cx="18" cy="50" r="1.15" fill="'+C+'" opacity=".8"/></g>';
+    if(sg.motes>=2)
+      o+='<g class="sg-spin">'+
+         '<circle cx="72.6" cy="27.4" r=".85" fill="'+C+'" opacity=".65"/>'+
+         '<circle cx="72.6" cy="72.6" r=".85" fill="'+C+'" opacity=".65"/>'+
+         '<circle cx="27.4" cy="72.6" r=".85" fill="'+C+'" opacity=".65"/>'+
+         '<circle cx="27.4" cy="27.4" r=".85" fill="'+C+'" opacity=".65"/></g>';
+
+    /* ---- ward geometry ---- */
+    if(sg.glyph>=1)
+      o+='<path d="M50 11 L83.8 69.5 L16.2 69.5 Z" fill="none" stroke="'+C+
+         '" stroke-width=".55" opacity=".3"/>';
+    if(sg.glyph>=2)
+      o+='<path d="M50 89 L16.2 30.5 L83.8 30.5 Z" fill="none" stroke="'+C+
+         '" stroke-width=".55" opacity=".22"/>';
+    if(sg.glyph>=3)
+      o+='<path d="M23 23 L77 23 L77 77 L23 77 Z" fill="none" stroke="'+C2+
+         '" stroke-width=".45" opacity=".26" transform="rotate(45 50 50)"/>';
+
+    /* ---- ambient glow ---- */
+    o+='<ellipse cx="50" cy="47" rx="28" ry="32" fill="url(#'+uid+'gl)" opacity=".5"/>';
+
+    /* ---- beams ---- */
+    if(sg.beam>=1)
+      o+='<path d="M46.5 47 L50 6 L53.5 47 Z" fill="url(#'+uid+'bm)" opacity=".5"/>';
+    if(sg.beam>=2)
+      o+='<path d="M46.5 47 L50 6 L53.5 47 Z" fill="url(#'+uid+'bm)" opacity=".3" '+
+         'transform="rotate(180 50 47)"/>';
+
+    /* ---- spikes / crown ---- */
+    if(sg.spikes && !sg.crown)
+      o+='<path d="M50 2.6 L53.7 15 L46.3 15 Z" fill="'+C+'" opacity=".9"/>';
+    if(sg.spikes)
+      o+='<path d="M50 97 L46.3 85 L53.7 85 Z" fill="'+C+'" opacity=".9"/>';
+    if(sg.crown)
+      o+='<path d="M33 20 L37.5 7 L44 14.5 L50 2 L56 14.5 L62.5 7 L67 20 Z" fill="'+C+
+         '" opacity=".96" stroke="'+C2+'" stroke-width=".5" stroke-linejoin="round"/>'+
+         '<circle cx="50" cy="2.2" r="1.9" fill="'+C+'"/>'+
+         '<circle cx="37.5" cy="6.4" r="1.2" fill="'+C+'" opacity=".9"/>'+
+         '<circle cx="62.5" cy="6.4" r="1.2" fill="'+C+'" opacity=".9"/>';
+
+    /* ---- base ---- */
+    if(sg.base>=1)
+      o+='<ellipse cx="50" cy="91" rx="21" ry="3.4" fill="'+C+'" opacity=".14"/>';
+    if(sg.base>=2)
+      o+='<path d="M32 89 L68 89 L62 94 L38 94 Z" fill="'+C3+
+         '" stroke="'+C2+'" stroke-width=".7" stroke-linejoin="round" opacity=".95"/>'+
+         '<path d="M36 89 L64 89" stroke="'+C+'" stroke-width=".6" opacity=".5"/>';
+    if(sg.base>=3)
+      o+='<path d="M27 94.3 L73 94.3 L69 97.8 L31 97.8 Z" fill="'+C3+
+         '" stroke="'+C2+'" stroke-width=".6" stroke-linejoin="round" opacity=".9"/>'+
+         '<circle cx="34" cy="91.5" r="1" fill="'+C+'" opacity=".75"/>'+
+         '<circle cx="66" cy="91.5" r="1" fill="'+C+'" opacity=".75"/>';
+
+    /* ---- crystal body: per-rank silhouette ---- */
+    var SH=shapeFor(sg.name), V=SH.v, HUB=SH.hub, n=V.length;
+    var hx=HUB[0], hy=HUB[1];
+    var SIL=pathOf(V);
+
+    o+='<path d="'+SIL+'" fill="'+C3+'" stroke="'+C+
+       '" stroke-width="1.5" stroke-linejoin="round"/>';
+
+    // facet panels: fan from the off-centre hub to each edge.
+    // Panels are revealed progressively by sg.facet so low ranks read flat.
+    var grads=[uid+'f1',uid+'f2',uid+'f3',uid+'f2',uid+'f1',uid+'f3',uid+'f2',uid+'f1',uid+'f3'];
+    var opac =[1,.62,.9,.55,.42,.75,.5,.66,.44];
+    var show;
+    if(sg.facet>=4) show=n; else if(sg.facet>=3) show=Math.ceil(n*0.78);
+    else if(sg.facet>=2) show=Math.ceil(n*0.55); else show=Math.ceil(n*0.34);
+    for(var fi=0;fi<show;fi++){
+      var a=V[fi], b=V[(fi+1)%n];
+      o+='<path d="M'+a[0]+' '+a[1]+' L'+b[0]+' '+b[1]+' L'+hx+' '+hy+
+         ' Z" fill="url(#'+grads[fi%grads.length]+')" opacity="'+opac[fi%opac.length]+'"/>';
+    }
+
+    // facet edges radiating from hub
+    o+='<g stroke="'+C+'" stroke-width=".6" opacity=".72" fill="none" stroke-linecap="round">';
+    for(var ei=0;ei<show;ei++){
+      o+='<path d="M'+V[ei][0]+' '+V[ei][1]+' L'+hx+' '+hy+'"/>';
+    }
+    o+='</g>';
+
+    // internal fractures, placed relative to the hub so they suit any shape
+    if(sg.frac>=1)
+      o+='<g stroke="'+C+'" stroke-width=".4" opacity=".42" fill="none" stroke-linecap="round">'+
+         '<path d="M'+(hx-1)+' '+(hy-25)+' L'+(hx-9)+' '+(hy-10)+' L'+(hx-4)+' '+(hy-2)+'"/>'+
+         '<path d="M'+(hx+12)+' '+(hy-18)+' L'+(hx+8)+' '+(hy-5)+'"/></g>';
+    if(sg.frac>=2)
+      o+='<g stroke="'+C+'" stroke-width=".38" opacity=".32" fill="none" stroke-linecap="round">'+
+         '<path d="M'+(hx-11)+' '+(hy+4)+' L'+(hx-3)+' '+(hy+15)+' L'+(hx-7)+' '+(hy+24)+'"/>'+
+         '<path d="M'+(hx+16)+' '+(hy+3)+' L'+(hx+10)+' '+(hy+16)+'"/>'+
+         '<path d="M'+(hx+2)+' '+(hy+22)+' L'+(hx+6)+' '+(hy+32)+'"/></g>';
+
+    // inner nested crystal: a scaled copy of the silhouette about the hub
+    function scaled(f){
+      var d='',i,x,y;
+      for(i=0;i<n;i++){
+        x=(hx+(V[i][0]-hx)*f); y=(hy+(V[i][1]-hy)*f);
+        d+=(i?' L':'M')+x.toFixed(1)+' '+y.toFixed(1);
+      }
+      return d+' Z';
+    }
+    if(sg.inner>=1)
+      o+='<path d="'+scaled(.6)+'" fill="none" stroke="'+C+
+         '" stroke-width=".5" opacity=".4"/>';
+    if(sg.inner>=2)
+      o+='<path d="'+scaled(.36)+'" fill="'+C+
+         '" opacity=".09" stroke="'+C+'" stroke-width=".4"/>';
+
+    o+='<path d="'+SIL+'" fill="none" stroke="'+C+
+       '" stroke-width="1.5" stroke-linejoin="round"/>';
+    // rim highlight along the two upper-left edges
+    o+='<path d="M'+V[n-1][0]+' '+V[n-1][1]+' L'+V[0][0]+' '+V[0][1]+
+       '" stroke="'+C+'" stroke-width="1.15" opacity=".6" fill="none" stroke-linecap="round"/>'+
+       '<path d="M'+V[n-2][0]+' '+V[n-2][1]+' L'+V[n-1][0]+' '+V[n-1][1]+
+       '" stroke="'+C+'" stroke-width=".8" opacity=".3" fill="none" stroke-linecap="round"/>';
+
+    /* ---- core ---- */
+    if(sg.core>=1){
+      var cr=(sg.core>=3?10:sg.core>=2?8.4:6.8);
+      o+='<circle cx="'+hx+'" cy="'+hy+'" r="'+cr+'" fill="#03070d" stroke="'+C+
+         '" stroke-width=".95"/>';
+    }
+    if(sg.core>=2){
+      o+='<circle class="sg-pulse" cx="'+hx+'" cy="'+hy+'" r="'+(sg.core>=3?5.2:4.2)+'" fill="'+C+'"/>'+
+         '<circle cx="'+hx+'" cy="'+hy+'" r="'+(sg.core>=3?7.2:6)+'" fill="none" stroke="'+C+
+         '" stroke-width=".4" opacity=".5"/>';
+    }else if(sg.core>=1){
+      o+='<circle cx="'+hx+'" cy="'+hy+'" r="3.4" fill="'+C+'" opacity=".92"/>';
+    }
+    if(sg.core>=3)
+      o+='<g class="sg-spin"><circle cx="'+hx+'" cy="'+hy+'" r="14" fill="none" stroke="'+C+
+         '" stroke-width=".5" opacity=".6" stroke-dasharray="2 3.4"/></g>'+
+         '<g class="sg-spin-r"><circle cx="'+hx+'" cy="'+hy+'" r="17.5" fill="none" stroke="'+C2+
+         '" stroke-width=".42" opacity=".45" stroke-dasharray="5 4"/></g>';
+
+    return '<svg viewBox="0 0 100 100" fill="none" aria-hidden="true">'+o+'</svg>';
+  }
+
+  function renderSigil(rankName){
+    var sg=sigilFor(rankName);
+    var fb=$("fallbackSigil");
+    if(fb) fb.innerHTML=sigilSVG(sg,"hero");
+    var line=$("rankname");
+    if(line&&line.parentNode&&line.parentNode.parentNode)
+      line.parentNode.parentNode.style.setProperty("--sg",sg.c);
   }
 
   function removeHabit(id){
