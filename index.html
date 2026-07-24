@@ -1201,7 +1201,15 @@
       el.addEventListener("click",function(ev){
         if(ev.target.classList.contains("del"))return;
         if(document.body.classList.contains("editing")){ openEdit(h.id); return; }
-        if(on){ unmarkDone(h.id); render(); return; }
+        if(on){
+          // Checkbox habits: unmark freely. Timed habits: confirm, because
+          // unmarking also clears the time you actually put in.
+          if(timed){
+            if(!confirm('Undo "'+h.name+'"?\nThis clears today\u2019s '+
+               shortMin(h.min)+' of logged time and you\u2019ll start over.')) return;
+          }
+          unmarkDone(h.id); render(); return;
+        }
         if(timed) startTimer(h);
         else { markDone(h.id); render(); }
       });
