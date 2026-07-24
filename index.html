@@ -31,8 +31,11 @@
       linear-gradient(180deg,#0a1220,#05070c 70%);
     box-shadow:0 0 40px rgba(77,163,255,.10),inset 0 1px 0 rgba(255,255,255,.04);}
   .hero-title{position:absolute;top:16px;left:18px;z-index:3;font-size:26px;font-weight:600;
+    cursor:pointer;-webkit-user-select:none;user-select:none;
+    padding:2px 6px;margin:-2px -6px;border-radius:8px;transition:background .16s;
     letter-spacing:-.01em;font-family:Georgia,"Times New Roman",serif;
     text-shadow:0 2px 14px rgba(0,0,0,.8);}
+  .hero-title:active{background:rgba(255,255,255,.09);}
   .hero-art{position:relative;height:250px;overflow:hidden;display:grid;place-items:center;}
   .hero-art img{width:100%;height:100%;object-fit:cover;object-position:center 22%;display:none;}
   .hero-art.has-img img{display:block;}
@@ -70,15 +73,18 @@
   .week{display:flex;justify-content:space-between;gap:6px;padding:0 18px 20px;position:relative;z-index:2;}
   .wd{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;}
   .wd-c{width:32px;height:32px;border-radius:50%;border:1.5px solid var(--line);
-    background:#0a1220;display:grid;place-items:center;transition:.2s;}
-  .wd-c svg{width:15px;height:15px;opacity:0;transition:.2s;}
-  .wd.full .wd-c{border-color:var(--cy);box-shadow:0 0 12px var(--cy-soft);background:#0d1c30;}
-  .wd.full .wd-c svg{opacity:1;}
-  .wd.part .wd-c{border-color:#2b7fd4;}
-  .wd.part .wd-c svg{opacity:.45;}
-  .wd.miss .wd-c{border-color:#3a2130;}
-  .wd.today .wd-c{border-color:var(--ink-dim);box-shadow:0 0 0 3px rgba(143,163,189,.12);}
+    background:#0a1220;display:grid;place-items:center;transition:.2s;
+    font-family:ui-monospace,"SF Mono",Menlo,monospace;font-variant-numeric:tabular-nums;
+    font-size:12px;color:var(--ink-faint);}
+  .wd.full .wd-c{border-color:var(--cy);box-shadow:0 0 12px var(--cy-soft);
+    background:#12324f;color:#dceaff;font-weight:600;}
+  .wd.part .wd-c{border-color:#2b7fd4;color:var(--ink-dim);background:#0d1c30;}
+  .wd.miss .wd-c{border-color:#3a2130;color:#5a4450;}
+  .wd.future .wd-c{opacity:.4;}
+  .wd.today .wd-c{box-shadow:0 0 0 3px rgba(143,163,189,.18);}
+  .wd.today.full .wd-c{box-shadow:0 0 12px var(--cy-soft),0 0 0 3px rgba(143,163,189,.22);}
   .wd-l{font-size:10px;color:var(--ink-faint);letter-spacing:.06em;}
+  .wd.today .wd-l{color:var(--ink-dim);}
 
   .sect{display:flex;justify-content:space-between;align-items:baseline;margin:26px 2px 11px;}
   .sect h2{margin:0;font-size:19px;font-weight:600;letter-spacing:-.01em;
@@ -243,7 +249,8 @@
 <div class="wrap">
 
   <section class="hero">
-    <div class="hero-title">BEN</div>
+    <div class="hero-title" id="heroTitle" role="button" tabindex="0"
+      title="Tap to rename">Home.</div>
     <div class="hero-art" id="art">
       <img id="heroimg" alt="">
       <div class="fallback" id="fallbackSigil"></div>
@@ -507,6 +514,7 @@
 
   /* ---- daily snapshots + export reminder ---- */
   var SNAPKEY="ascend.snaps", METAKEY="ascend.meta", MAXSNAPS=14;
+  var TITLEKEY="ascend.title";
 
   function getMeta(){
     try{var m=JSON.parse(localStorage.getItem(METAKEY));if(m)return m;}catch(e){}
@@ -561,7 +569,9 @@
   }
 
   function doExport(){
-    var payload={version:5,exportedAt:new Date().toISOString(),state:state};
+    var t=null;
+    try{t=localStorage.getItem(TITLEKEY);}catch(e){}
+    var payload={version:6,exportedAt:new Date().toISOString(),title:t,state:state};
     var b=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
     var a=document.createElement("a");
     a.href=URL.createObjectURL(b);
@@ -860,11 +870,16 @@
         if(state.habits.length&&cnt>=state.habits.length)cls+=" full";
         else if(cnt>0)cls+=" part";
         else if(off>0)cls+=" miss";
+      }else{
+        cls+=" future";
       }
       if(off===0)cls+=" today";
+      // date number for this column (works for past and future days)
+      var cd=new Date(); cd.setDate(cd.getDate()-off);
       var el=document.createElement("div");
       el.className=cls;
-      el.innerHTML='<div class="wd-c">'+CHECK_C+'</div><div class="wd-l">'+L[i]+'</div>';
+      el.innerHTML='<div class="wd-c">'+cd.getDate()+'</div><div class="wd-l">'+L[i]+'</div>';
+      el.title=cd.getFullYear()+"-"+pad(cd.getMonth()+1)+"-"+pad(cd.getDate());
       wk.appendChild(el);
     }
 
@@ -1510,6 +1525,26 @@
   $("ovStop").addEventListener("click",pauseTimer);
   $("ovDone").addEventListener("click",function(){closeOverlay();render();});
 
+  /* ---- editable hero title ---- */
+  function loadTitle(){
+    var t;
+    try{t=localStorage.getItem(TITLEKEY);}catch(e){}
+    $("heroTitle").textContent=t||"Home.";
+  }
+  function editTitle(){
+    var cur=$("heroTitle").textContent;
+    var t=prompt("Name this screen",cur);
+    if(t===null) return;               // cancelled
+    t=t.trim().slice(0,24);
+    if(!t) t="Home.";
+    try{localStorage.setItem(TITLEKEY,t);}catch(e){}
+    $("heroTitle").textContent=t;
+  }
+  $("heroTitle").addEventListener("click",editTitle);
+  $("heroTitle").addEventListener("keydown",function(e){
+    if(e.key==="Enter"||e.key===" "){e.preventDefault();editTitle();}
+  });
+
   /* ---- animation power saving ---- */
   // Motion is paused whenever the app is backgrounded, or the sigil has been
   // scrolled off screen. Both are pure savings: nothing is visible either way.
@@ -1613,6 +1648,10 @@
           snaps.push({date:today(),at:Date.now(),data:JSON.stringify(state)});
           while(snaps.length>MAXSNAPS) snaps.shift();
           putSnaps(snaps);
+          if(raw&&raw.title){
+            try{localStorage.setItem(TITLEKEY,raw.title);}catch(e2){}
+            loadTitle();
+          }
           state=migrate(s); save(); render();
         }
       }catch(err){}
@@ -1621,7 +1660,7 @@
     e.target.value="";
   });
 
-  loadImg();save();
+  loadImg();loadTitle();save();
   snapshotIfNeeded();
   render();
   refreshBackupBar();
