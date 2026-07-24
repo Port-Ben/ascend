@@ -209,6 +209,46 @@
   .noData{background:var(--panel);border:1px dashed var(--line);border-radius:12px;
     padding:24px 16px;text-align:center;color:var(--ink-faint);font-size:12.5px;line-height:1.7;}
 
+  /* ===== achievements ===== */
+  .title-line{font-size:12px;letter-spacing:.16em;color:var(--ink-dim);
+    margin-top:2px;font-style:italic;font-family:Georgia,"Times New Roman",serif;}
+  .tokenbar{display:flex;align-items:center;gap:10px;margin-top:16px;
+    background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:13px;}
+  .tokenbar .tk{display:flex;gap:5px;}
+  .tokenbar .tk i{width:16px;height:16px;border-radius:50%;display:block;
+    border:1.5px solid var(--cy);background:var(--cy);box-shadow:0 0 8px var(--cy-soft);}
+  .tokenbar .tk i.spent{background:none;border-color:var(--line);box-shadow:none;}
+  .tokenbar .tl{flex:1;min-width:0;}
+  .tokenbar .tn{font-size:12.5px;}
+  .tokenbar .ts{font-size:10.5px;color:var(--ink-faint);margin-top:2px;line-height:1.5;}
+  .pick{display:flex;flex-wrap:wrap;gap:7px;}
+  .pick button{background:var(--panel);border:1px solid var(--line);color:var(--ink-dim);
+    font:inherit;font-size:12px;padding:8px 12px;border-radius:9px;cursor:pointer;
+    font-family:Georgia,"Times New Roman",serif;font-style:italic;}
+  .pick button.on{border-color:var(--cy);color:var(--ink);background:var(--panel-2);}
+  .pick button:active{opacity:.75;}
+  .themes{display:flex;flex-wrap:wrap;gap:9px;}
+  .themes button{width:42px;height:42px;border-radius:11px;cursor:pointer;
+    border:1.5px solid var(--line);background:var(--panel);display:grid;place-items:center;
+    padding:0;transition:.16s;}
+  .themes button i{width:20px;height:20px;border-radius:50%;display:block;}
+  .themes button.on{border-color:var(--ink);transform:scale(1.06);}
+  .themes button.locked{opacity:.3;cursor:default;}
+  .ach{display:flex;align-items:flex-start;gap:11px;background:var(--panel);
+    border:1px solid var(--line);border-radius:12px;padding:12px 13px;margin-bottom:8px;}
+  .ach.locked{opacity:.55;}
+  .ach-m{width:26px;height:26px;flex:none;border-radius:7px;display:grid;place-items:center;
+    border:1.5px solid var(--line);font-size:13px;color:var(--ink-faint);}
+  .ach.done .ach-m{border-color:var(--cy);background:var(--cy);color:#05070c;}
+  .ach-b{flex:1;min-width:0;}
+  .ach-n{font-size:13.5px;}
+  .ach-d{font-size:11px;color:var(--ink-faint);margin-top:2px;}
+  .ach-r{font-size:10px;color:var(--cy);margin-top:4px;letter-spacing:.1em;text-transform:uppercase;}
+  .ach.locked .ach-r{color:var(--ink-faint);}
+  .ach-p{height:3px;border-radius:2px;background:#0e1725;margin-top:7px;overflow:hidden;}
+  .ach-p span{display:block;height:100%;background:var(--cy);transition:width .4s ease;}
+  .ach-when{font-size:10px;color:var(--ink-faint);flex:none;}
+
   /* ============ FOCUS OVERLAY ============ */
 
   .ov{position:fixed;inset:0;z-index:50;background:#05070c;
@@ -259,6 +299,7 @@
       <div class="rank-line">
         <span class="rank-eyebrow" id="rankname">Initiate</span>
       </div>
+      <div class="title-line" id="titleLine" style="display:none"></div>
       <div class="lvl num">Level <span id="level">1</span></div>
       <div class="tier" id="tier">IRON IV</div>
     </div>
@@ -276,6 +317,7 @@
   <div class="tabs">
     <button class="tab on" id="tabHome">Today</button>
     <button class="tab" id="tabStats">Stats</button>
+    <button class="tab" id="tabAch">Awards</button>
   </div>
 
   <div id="paneHome">
@@ -328,6 +370,19 @@
 
     <div class="sect"><h2>Time logged.</h2><span class="meta num" id="timeMeta"></span></div>
     <div id="times"></div>
+  </div>
+
+  <div id="paneAch" style="display:none">
+    <div class="tokenbar" id="tokenBar"></div>
+
+    <div class="sect"><h2>Title.</h2><span class="meta num" id="titleMeta"></span></div>
+    <div id="titlePick"></div>
+
+    <div class="sect"><h2>Theme.</h2><span class="meta num" id="themeMeta"></span></div>
+    <div class="themes" id="themePick"></div>
+
+    <div class="sect"><h2>Awards.</h2><span class="meta num" id="achMeta"></span></div>
+    <div id="achList"></div>
   </div>
 
   <div id="backupBar" style="display:none;margin-top:14px;background:#141b12;
@@ -515,6 +570,7 @@
   /* ---- daily snapshots + export reminder ---- */
   var SNAPKEY="ascend.snaps", METAKEY="ascend.meta", MAXSNAPS=14;
   var TITLEKEY="ascend.title";
+  var ACHKEY="ascend.ach";
 
   function getMeta(){
     try{var m=JSON.parse(localStorage.getItem(METAKEY));if(m)return m;}catch(e){}
@@ -571,7 +627,10 @@
   function doExport(){
     var t=null;
     try{t=localStorage.getItem(TITLEKEY);}catch(e){}
-    var payload={version:6,exportedAt:new Date().toISOString(),title:t,state:state};
+    var ac=null;
+    try{ac=JSON.parse(localStorage.getItem(ACHKEY));}catch(e){}
+    var payload={version:7,exportedAt:new Date().toISOString(),
+      title:t,ach:ac,state:state};
     var b=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
     var a=document.createElement("a");
     a.href=URL.createObjectURL(b);
@@ -802,15 +861,192 @@
   }
 
   /* ---- scoring ---- */
+  /* ================= ACHIEVEMENTS ================= */
+  // All achievements are evaluated retroactively from history, so adding a new
+  // one later will correctly unlock against existing data.
+  // reward: {title:"..."} | {theme:"id"} | {token:n}
+  var ACH=[
+    {id:"first",     name:"First Light",      desc:"Complete any habit",
+     reward:{title:"The Willing"}},
+    {id:"perfect1",  name:"Flawless",         desc:"Complete every habit in a day",
+     reward:{title:"The Exacting"}},
+    {id:"streak3",   name:"Momentum",         desc:"3 day streak",
+     reward:{token:1}},
+    {id:"streak7",   name:"Seven",            desc:"7 day streak",
+     reward:{theme:"ember"}},
+    {id:"streak14",  name:"Fortnight",        desc:"14 day streak",
+     reward:{token:1}},
+    {id:"streak30",  name:"The Long Month",   desc:"30 day streak",
+     reward:{title:"The Unbroken",theme:"verdant"}},
+    {id:"streak100", name:"Centurion",        desc:"100 day streak",
+     reward:{title:"The Relentless",theme:"gold"}},
+    {id:"perfect10", name:"Ten Perfect Days", desc:"10 days with everything done",
+     reward:{token:1}},
+    {id:"perfect30", name:"Thirty Perfect",   desc:"30 days with everything done",
+     reward:{title:"The Complete",theme:"violet"}},
+    {id:"total100",  name:"Hundred",          desc:"100 habits completed",
+     reward:{token:1}},
+    {id:"total500",  name:"Five Hundred",     desc:"500 habits completed",
+     reward:{title:"The Diligent"}},
+    {id:"total1000", name:"Thousand",         desc:"1000 habits completed",
+     reward:{title:"The Devoted",theme:"crimson"}},
+    {id:"time10",    name:"Ten Hours",        desc:"10 hours on timed habits",
+     reward:{token:1}},
+    {id:"time100",   name:"Hundred Hours",    desc:"100 hours on timed habits",
+     reward:{title:"The Practised"}},
+    {id:"time500",   name:"Deep Work",        desc:"500 hours on timed habits",
+     reward:{title:"The Master",theme:"frost"}},
+    {id:"comeback",  name:"Return",           desc:"Resume after a 7+ day gap",
+     reward:{title:"The Returned"}},
+    {id:"rank3",     name:"Awakening",        desc:"Reach Awakened",
+     reward:{title:"The Awakened"}},
+    {id:"rank5",     name:"Immortality",      desc:"Reach Immortal",
+     reward:{title:"The Immortal",theme:"void"}}
+  ];
+
+  var THEMES={
+    azure:  {name:"Azure",   c:"#4da3ff"},
+    ember:  {name:"Ember",   c:"#ff8a4d"},
+    verdant:{name:"Verdant", c:"#3ddc97"},
+    gold:   {name:"Gold",    c:"#f0b429"},
+    violet: {name:"Violet",  c:"#a97bff"},
+    crimson:{name:"Crimson", c:"#ff5d73"},
+    frost:  {name:"Frost",   c:"#8fd8e8"},
+    void:   {name:"Void",    c:"#c9b6ff"}
+  };
+
+  function getAch(){
+    try{var a=JSON.parse(localStorage.getItem(ACHKEY));if(a)return a;}catch(e){}
+    return {unlocked:{},theme:"azure",title:null,tokensUsed:{}};
+  }
+  function setAch(a){try{localStorage.setItem(ACHKEY,JSON.stringify(a));}catch(e){}}
+
+  // ---- history metrics, computed fresh each evaluation ----
+  function historyStats(){
+    var days=daysSince(firstDay())+1;
+    var totalDone=0, perfectDays=0, bestStreak=0, cur=0, timeTotal=0;
+    var hadGap=false, gapLen=0, sawActivity=false, comeback=false;
+    var nh=state.habits.length;
+    for(var i=days-1;i>=0;i--){
+      var dk=dayKey(i), done=doneSet(dk);
+      totalDone+=done.length;
+      if(nh&&done.length>=nh) perfectDays++;
+      if(done.length>0){
+        if(gapLen>=7&&sawActivity) comeback=true;
+        gapLen=0; sawActivity=true;
+        cur++; if(cur>bestStreak) bestStreak=cur;
+      }else if(i>0){
+        cur=0; gapLen++;
+      }
+      var tb=state.time[dk];
+      if(tb) for(var k in tb) if(tb.hasOwnProperty(k)) timeTotal+=tb[k];
+    }
+    return {days:days,totalDone:totalDone,perfectDays:perfectDays,
+            bestStreak:bestStreak,timeHours:timeTotal/3600,comeback:comeback};
+  }
+
+  function achMet(id,h,lvl){
+    switch(id){
+      case "first":     return h.totalDone>=1;
+      case "perfect1":  return h.perfectDays>=1;
+      case "streak3":   return h.bestStreak>=3;
+      case "streak7":   return h.bestStreak>=7;
+      case "streak14":  return h.bestStreak>=14;
+      case "streak30":  return h.bestStreak>=30;
+      case "streak100": return h.bestStreak>=100;
+      case "perfect10": return h.perfectDays>=10;
+      case "perfect30": return h.perfectDays>=30;
+      case "total100":  return h.totalDone>=100;
+      case "total500":  return h.totalDone>=500;
+      case "total1000": return h.totalDone>=1000;
+      case "time10":    return h.timeHours>=10;
+      case "time100":   return h.timeHours>=100;
+      case "time500":   return h.timeHours>=500;
+      case "comeback":  return h.comeback;
+      case "rank3":     return lvl>=10;
+      case "rank5":     return lvl>=24;
+    }
+    return false;
+  }
+
+  function achProgress(id,h,lvl){
+    // returns [current, goal] for a progress bar, or null
+    switch(id){
+      case "streak3":   return [Math.min(h.bestStreak,3),3];
+      case "streak7":   return [Math.min(h.bestStreak,7),7];
+      case "streak14":  return [Math.min(h.bestStreak,14),14];
+      case "streak30":  return [Math.min(h.bestStreak,30),30];
+      case "streak100": return [Math.min(h.bestStreak,100),100];
+      case "perfect10": return [Math.min(h.perfectDays,10),10];
+      case "perfect30": return [Math.min(h.perfectDays,30),30];
+      case "total100":  return [Math.min(h.totalDone,100),100];
+      case "total500":  return [Math.min(h.totalDone,500),500];
+      case "total1000": return [Math.min(h.totalDone,1000),1000];
+      case "time10":    return [Math.min(h.timeHours,10),10];
+      case "time100":   return [Math.min(h.timeHours,100),100];
+      case "time500":   return [Math.min(h.timeHours,500),500];
+    }
+    return null;
+  }
+
+  // Evaluate all achievements. Returns list of ids newly unlocked this pass.
+  function evaluateAch(lvl){
+    var a=getAch(), h=historyStats(), fresh=[];
+    ACH.forEach(function(x){
+      if(a.unlocked[x.id]) return;
+      if(achMet(x.id,h,lvl)){
+        a.unlocked[x.id]=today();
+        fresh.push(x.id);
+      }
+    });
+    if(fresh.length) setAch(a);
+    return fresh;
+  }
+
+  function tokensEarned(){
+    var a=getAch(),n=0;
+    ACH.forEach(function(x){
+      if(a.unlocked[x.id]&&x.reward&&x.reward.token) n+=x.reward.token;
+    });
+    return n;
+  }
+  function tokensSpent(){
+    var a=getAch(),n=0;
+    for(var k in a.tokensUsed) if(a.tokensUsed.hasOwnProperty(k)) n++;
+    return n;
+  }
+  // Available buffer tokens, capped at 3.
+  function tokensLeft(){
+    return Math.max(0,Math.min(3,tokensEarned()-tokensSpent()));
+  }
+
+  function unlockedTitles(){
+    var a=getAch(),out=[];
+    ACH.forEach(function(x){
+      if(a.unlocked[x.id]&&x.reward&&x.reward.title) out.push(x.reward.title);
+    });
+    return out;
+  }
+  function unlockedThemes(){
+    var a=getAch(),out=["azure"];
+    ACH.forEach(function(x){
+      if(a.unlocked[x.id]&&x.reward&&x.reward.theme) out.push(x.reward.theme);
+    });
+    return out;
+  }
+
   function scores(){
     var tot={},all=0;
     DOMAINS.forEach(function(d){tot[d.id]=0;});
     var span=daysSince(state.created);
+    var ach=getAch(), shield=(ach&&ach.tokensUsed)||{};
     for(var i=span;i>=0;i--){
-      var done=doneSet(dayKey(i)),isToday=(i===0);
+      var dk=dayKey(i);
+      var done=doneSet(dk),isToday=(i===0);
+      var protectedDay=!!shield[dk];
       state.habits.forEach(function(h){
         if(done.indexOf(h.id)>-1){tot[h.dom]=(tot[h.dom]||0)+h.pts;all+=h.pts;}
-        else if(!isToday){
+        else if(!isToday&&!protectedDay){
           tot[h.dom]=Math.max(FLOOR,(tot[h.dom]||0)-h.pts*MISS_PENALTY);
           all=Math.max(FLOOR,all-h.pts*MISS_PENALTY);
         }
@@ -823,9 +1059,44 @@
     state.habits.forEach(function(h){if(done.indexOf(h.id)<0)p+=h.pts*MISS_PENALTY;});
     return p;
   }
+  /* ---- buffer tokens: auto-consume on a fully missed day ---- */
+  // Runs before scoring. Any past day with zero completions gets a token
+  // spent on it (if available), which then shields it from penalty and
+  // keeps the streak intact. Oldest missed days are covered first.
+  function applyTokens(){
+    var a=getAch();
+    if(!a.tokensUsed) a.tokensUsed={};
+    var earned=tokensEarned();
+    var used=0;
+    for(var k in a.tokensUsed) if(a.tokensUsed.hasOwnProperty(k)) used++;
+    var avail=Math.min(3,earned-used);
+    if(avail<=0) return false;
+    var span=daysSince(firstDay()), changed=false;
+    // Newest-first: protecting recent misses is what keeps the live streak
+    // alive; shielding an ancient gap would be wasted.
+    for(var i=1;i<=span&&avail>0;i++){
+      var dk=dayKey(i);
+      if(a.tokensUsed[dk]) continue;
+      if(doneSet(dk).length>0) continue;
+      if(dk<firstDay()) continue;
+      a.tokensUsed[dk]=true; avail--; changed=true;
+    }
+    if(changed) setAch(a);
+    return changed;
+  }
+  function isShielded(dk){
+    var a=getAch();
+    return !!(a.tokensUsed&&a.tokensUsed[dk]);
+  }
+
   function streak(){
     var n=0;
-    for(var i=1;i<500;i++){if(doneSet(dayKey(i)).length>0)n++;else break;}
+    for(var i=1;i<500;i++){
+      var dk=dayKey(i);
+      if(doneSet(dk).length>0){n++;}
+      else if(isShielded(dk)){ /* shielded: streak survives, no increment */ }
+      else break;
+    }
     if(doneSet(today()).length>0)n++;
     return n;
   }
@@ -844,12 +1115,27 @@
   var PLAY='<svg viewBox="0 0 12 12" fill="var(--dc)" stroke="none"><path d="M3.6 2.4 L9.4 6 L3.6 9.6 Z"/></svg>';
 
   function render(){
-    var s=scores(),lvl=Math.floor(s.total/PER_LEVEL)+1,into=s.total%PER_LEVEL;
+    // Achievements grant tokens, tokens shield missed days, shields change the
+    // score, and the score can unlock further achievements. Iterate to a fixed
+    // point (bounded) so the three stay consistent.
+    var s=scores();
+    for(var pass=0;pass<4;pass++){
+      var lvl0=Math.floor(s.total/PER_LEVEL)+1;
+      var fresh=evaluateAch(lvl0);
+      var moved=applyTokens();
+      if(!fresh.length&&!moved) break;
+      s=scores();
+    }
+    var lvl=Math.floor(s.total/PER_LEVEL)+1,into=s.total%PER_LEVEL;
     var rk=rankFor(lvl);
     $("level").textContent=lvl;
     $("rankname").textContent=rk.name;
     renderSigil(rk.name);
     $("tier").textContent=rk.tier;
+    var ach=getAch();
+    var tl=$("titleLine");
+    if(ach.title){tl.textContent=ach.title;tl.style.display="";}
+    else{tl.style.display="none";}
     $("totalpts").textContent=s.total+" pts";
     $("xpfill").style.width=(into/PER_LEVEL*100)+"%";
     $("lvlA").textContent="Lv. "+lvl;
@@ -943,6 +1229,7 @@
     var stk=streak();
     $("streak").textContent=stk+" day streak"+(p>0?"   today −"+(Math.round(p*10)/10):"");
     if(activeTab==="stats") renderStats();
+    if(activeTab==="ach") renderAchPane();
   }
 
   /* ================= STATS ================= */
@@ -1150,14 +1437,115 @@
       'stroke-linejoin="round" stroke-linecap="round"/>'+pts;
   }
 
+  /* ---- achievements UI ---- */
+  function applyTheme(){
+    var a=getAch(), t=THEMES[a.theme]||THEMES.azure;
+    document.documentElement.style.setProperty("--cy",t.c);
+    document.documentElement.style.setProperty("--cy-soft",hexA(t.c,.35));
+  }
+
+  function renderAchPane(){
+    var a=getAch(), h=historyStats();
+    var s=scores(), lvl=Math.floor(s.total/PER_LEVEL)+1;
+    var left=tokensLeft(), earned=tokensEarned(), spent=tokensSpent();
+
+    /* tokens */
+    var tk="";
+    for(var i=0;i<3;i++) tk+='<i class="'+(i<left?"":"spent")+'"></i>';
+    $("tokenBar").innerHTML=
+      '<div class="tk">'+tk+'</div>'+
+      '<div class="tl"><div class="tn">Buffer tokens · '+left+' of 3</div>'+
+      '<div class="ts">Spent automatically on a fully missed day: no penalty, '+
+      'streak survives. '+earned+' earned, '+spent+' used.</div></div>';
+
+    /* titles */
+    var titles=unlockedTitles();
+    $("titleMeta").textContent=titles.length+" unlocked";
+    var tp=$("titlePick");
+    tp.className="pick";
+    tp.innerHTML="";
+    if(!titles.length){
+      tp.innerHTML='<div class="noData" style="width:100%">No titles yet. '+
+        'Unlock them through awards below.</div>';
+    }else{
+      var none=document.createElement("button");
+      none.textContent="None";
+      none.className=a.title?"":"on";
+      none.style.fontStyle="normal";
+      none.addEventListener("click",function(){
+        var z=getAch(); z.title=null; setAch(z); renderAchPane(); render();
+      });
+      tp.appendChild(none);
+      titles.forEach(function(t){
+        var b=document.createElement("button");
+        b.textContent=t;
+        b.className=(a.title===t)?"on":"";
+        b.addEventListener("click",function(){
+          var z=getAch(); z.title=t; setAch(z); renderAchPane(); render();
+        });
+        tp.appendChild(b);
+      });
+    }
+
+    /* themes */
+    var open=unlockedThemes();
+    $("themeMeta").textContent=open.length+" of "+Object.keys(THEMES).length;
+    var thp=$("themePick");
+    thp.innerHTML="";
+    Object.keys(THEMES).forEach(function(id){
+      var t=THEMES[id], has=open.indexOf(id)>-1;
+      var b=document.createElement("button");
+      b.className=(a.theme===id?"on ":"")+(has?"":"locked");
+      b.title=t.name+(has?"":" — locked");
+      b.innerHTML='<i style="background:'+t.c+';box-shadow:0 0 9px '+t.c+'"></i>';
+      if(has) b.addEventListener("click",function(){
+        var z=getAch(); z.theme=id; setAch(z);
+        applyTheme(); renderAchPane(); render();
+      });
+      thp.appendChild(b);
+    });
+
+    /* award list */
+    var got=0;
+    ACH.forEach(function(x){if(a.unlocked[x.id])got++;});
+    $("achMeta").textContent=got+" of "+ACH.length;
+    var al=$("achList");
+    al.innerHTML="";
+    ACH.forEach(function(x){
+      var done=!!a.unlocked[x.id];
+      var el=document.createElement("div");
+      el.className="ach"+(done?" done":" locked");
+      var rw=[];
+      if(x.reward.title) rw.push('Title: '+x.reward.title);
+      if(x.reward.theme) rw.push('Theme: '+(THEMES[x.reward.theme]||{}).name);
+      if(x.reward.token) rw.push(x.reward.token+' buffer token');
+      var prog=done?null:achProgress(x.id,h,lvl);
+      el.innerHTML='<div class="ach-m">'+(done?"\u2713":"\u25CB")+'</div>'+
+        '<div class="ach-b"><div class="ach-n"></div><div class="ach-d"></div>'+
+        '<div class="ach-r"></div>'+
+        (prog?'<div class="ach-p"><span style="width:'+
+          (prog[1]?Math.min(100,prog[0]/prog[1]*100):0)+'%"></span></div>':'')+
+        '</div>'+
+        (done?'<div class="ach-when num">'+a.unlocked[x.id].slice(5)+'</div>':'');
+      el.querySelector(".ach-n").textContent=x.name;
+      el.querySelector(".ach-d").textContent=x.desc+
+        (prog?"  ("+(prog[0]<10?prog[0].toFixed(prog[0]%1?1:0):Math.round(prog[0]))+
+          " / "+prog[1]+")":"");
+      el.querySelector(".ach-r").textContent=rw.join(" · ");
+      al.appendChild(el);
+    });
+  }
+
   function switchTab(which){
     activeTab=which;
-    var home=which==="home";
-    $("paneHome").style.display=home?"":"none";
-    $("paneStats").style.display=home?"none":"";
-    $("tabHome").className="tab"+(home?" on":"");
-    $("tabStats").className="tab"+(home?"":" on");
-    if(!home) renderStats();
+    $("paneHome").style.display=(which==="home")?"":"none";
+    $("paneStats").style.display=(which==="stats")?"":"none";
+    $("paneAch").style.display=(which==="ach")?"":"none";
+    $("tabHome").className="tab"+(which==="home"?" on":"");
+    $("tabStats").className="tab"+(which==="stats"?" on":"");
+    $("tabAch").className="tab"+(which==="ach"?" on":"");
+    if(which==="stats") renderStats();
+    if(which==="ach") renderAchPane();
   }
 
   /* ================= RANK SIGILS ================= */
@@ -1615,6 +2003,7 @@
   });
   $("tabHome").addEventListener("click",function(){switchTab("home");});
   $("tabStats").addEventListener("click",function(){switchTab("stats");});
+  $("tabAch").addEventListener("click",function(){switchTab("ach");});
   Array.prototype.forEach.call($("scaleBar").children,function(b){
     b.addEventListener("click",function(){
       scaleDays=parseInt(this.getAttribute("data-d"),10);
@@ -1652,6 +2041,10 @@
             try{localStorage.setItem(TITLEKEY,raw.title);}catch(e2){}
             loadTitle();
           }
+          if(raw&&raw.ach){
+            try{localStorage.setItem(ACHKEY,JSON.stringify(raw.ach));}catch(e3){}
+            applyTheme();
+          }
           state=migrate(s); save(); render();
         }
       }catch(err){}
@@ -1660,7 +2053,7 @@
     e.target.value="";
   });
 
-  loadImg();loadTitle();save();
+  loadImg();loadTitle();applyTheme();save();
   snapshotIfNeeded();
   render();
   refreshBackupBar();
