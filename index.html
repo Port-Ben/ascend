@@ -1148,7 +1148,7 @@
     $("datestr").textContent=DN[d.getDay()]+", "+MN[d.getMonth()]+" "+d.getDate()+".";
 
     var wk=$("week");wk.innerHTML="";
-    var dow=(d.getDay()+6)%7,L=["M","T","W","T","F","S","S"];
+    var dow=d.getDay(),L=["S","M","T","W","T","F","S"];
     for(var i=0;i<7;i++){
       var off=dow-i,cls="wd";
       if(off>=0){
@@ -1318,7 +1318,7 @@
     var hd=Math.min(s.days,371);
     // pad so the grid starts on a Monday column
     var oldest=new Date(); oldest.setDate(oldest.getDate()-(hd-1));
-    var padStart=(oldest.getDay()+6)%7;
+    var padStart=oldest.getDay();
     for(var p=0;p<padStart;p++){
       var pad_=document.createElement("i"); pad_.className="future"; heat.appendChild(pad_);
     }
